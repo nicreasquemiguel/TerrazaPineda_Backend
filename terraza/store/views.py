@@ -12,7 +12,7 @@ from .filters import PaymentOrderFilter
 from .models import PaymentOrder, Payment, RefundRequest
 from .serializers import PaymentOrderSerializer, PaymentSerializer, RefundRequestSerializer
 
-stripe.api_key = "your_stripe_secret_key"
+stripe.api_key = settings.STRIPE_SECRET_KEY
 mercado = mercadopago.SDK("your_mercadopago_access_token")
 
 

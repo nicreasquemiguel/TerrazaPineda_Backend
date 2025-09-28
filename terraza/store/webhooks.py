@@ -8,7 +8,7 @@ from django.utils.timezone import now
 from django.conf import settings
 
 STRIPE_SECRET_KEY = settings.STRIPE_SECRET_KEY
-STRIPE_WEBHOOK_KEY = 'whsec_4d98303fa472fddbe7dcd4ea4e3e3918cb10283d6b737d87e8dee932a02c0f35'
+STRIPE_WEBHOOK_KEY = settings.STRIPE_WEBHOOK_KEY
 
 stripe.api_key = STRIPE_SECRET_KEY
 
