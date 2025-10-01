@@ -42,6 +42,7 @@ ALLOWED_HOSTS = [
     'terrazapineda.com',
     'www.terrazapineda.com',
     '54.144.65.30',
+    '54.172.191.58'
     '127.0.0.1',
     'localhost'
 ]
