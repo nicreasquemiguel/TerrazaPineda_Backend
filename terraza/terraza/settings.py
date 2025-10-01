@@ -38,7 +38,13 @@ SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool("DEBUG", default=False)  # Cambiar a False en producción
-ALLOWED_HOSTS = ['terrazapineda.com', 'www.terrazapineda.com', '54.144.65.30']
+ALLOWED_HOSTS = [
+    'terrazapineda.com',
+    'www.terrazapineda.com',
+    '54.144.65.30',
+    '127.0.0.1',
+    'localhost'
+]
 
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
