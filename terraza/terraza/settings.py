@@ -53,6 +53,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://www.terrazapineda.com",
     "http://localhost:5173",  # Para desarrollo local
     "http://192.168.100.10:5173",  # Para desarrollo en red local
+    "54.146.18.92"
 ]
 
 CORS_ALLOW_METHODS = [
@@ -77,6 +78,8 @@ CSRF_TRUSTED_ORIGINS = [
     "http://192.168.100.10:5173",
     "http://localhost:8000",
     "http://192.168.100.10:8000",
+    "http://54.146.18.92",
+    "https://54.146.18.92"
 ]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
