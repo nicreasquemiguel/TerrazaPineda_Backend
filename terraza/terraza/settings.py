@@ -67,9 +67,15 @@ CORS_ALLOW_METHODS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
-SESSION_COOKIE_SECURE = True  # Solo si usas HTTPS
-CSRF_COOKIE_SECURE = True     # Solo si usas HTTPS
-SECURE_SSL_REDIRECT = False   # Mantén False si usas proxy reverso
+# cookies pueden viajar por HTTP
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+
+# no fuerces redirección HTTPS
+SECURE_SSL_REDIRECT = False
+
+# si tienes proxy inverso (nginx) lo puedes mantener
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 CSRF_TRUSTED_ORIGINS = [
     "https://terrazapineda.com",
@@ -78,8 +84,8 @@ CSRF_TRUSTED_ORIGINS = [
     "http://192.168.100.10:5173",
     "http://localhost:8000",
     "http://192.168.100.10:8000",
-    "http://54.146.18.92",
-    "https://54.146.18.92"
+    "http://54.146.18.92:8000",
+    "https://54.146.18.92:8000"
 ]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
