@@ -39,6 +39,7 @@ SECRET_KEY = env("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool("DEBUG", default=False)  # Cambiar a False en producción
 ALLOWED_HOSTS = [
+    'api.terrazapineda.com',
     'terrazapineda.com',
     'www.terrazapineda.com',
     '54.144.65.30',
