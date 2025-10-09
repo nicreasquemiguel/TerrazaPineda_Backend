@@ -44,8 +44,10 @@ ALLOWED_HOSTS = [
     '54.144.65.30',
     '54.172.191.58',
     '127.0.0.1',
+    '54.146.18.92',
     'localhost'
 ]
+
 
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
@@ -53,7 +55,8 @@ CORS_ALLOWED_ORIGINS = [
     "https://www.terrazapineda.com",
     "http://localhost:5173",  # Para desarrollo local
     "http://192.168.100.10:5173",  # Para desarrollo en red local
-    "54.146.18.92"
+    "https://54.146.18.92",
+    "http://54.146.18.92"
 ]
 
 CORS_ALLOW_METHODS = [
@@ -325,7 +328,12 @@ STATICFILES_DIRS = [
 ]
 
 # Carpeta donde se copiarán todos los estáticos al hacer collectstatic
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+DEBUG = False
+
+
+
+STATIC_ROOT = '/home/ec2-user/server/TerrazaPineda_Backend/terraza/staticfiles'
+
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
