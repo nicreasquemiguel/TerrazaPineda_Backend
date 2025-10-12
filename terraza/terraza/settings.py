@@ -324,9 +324,9 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 # Archivos estáticos de las apps + /static en desarrollo
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static')
-]
+# STATICFILES_DIRS = [
+#     os.path.join(BASE_DIR, 'static')
+# ]
 
 # Carpeta donde se copiarán todos los estáticos al hacer collectstatic
 DEBUG = False
