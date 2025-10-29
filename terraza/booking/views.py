@@ -328,14 +328,8 @@ class BookingStatusCountsView(APIView):
         return Response(status_counts)
 
 class BookedDatesView(APIView):
-    permission_classes = []
+    permission_classes = [permissions.AllowAny]
     authentication_classes = []
-    
-    def get_permissions(self):
-        return []  # Explicitly return empty permissions
-    
-    def get_authenticators(self):
-        return []  # Explicitly return empty authenticators
 
     def get(self, request, *args, **kwargs):
         venue_id = request.query_params.get('venue')
@@ -435,3 +429,4 @@ class ReviewViewSet(viewsets.ModelViewSet):
             serializer.is_valid(raise_exception=True)
             instance = serializer.save(user=request.user, booking=booking)
         return Response(self.get_serializer(instance).data)
+    
