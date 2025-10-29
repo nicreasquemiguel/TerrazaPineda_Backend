@@ -158,7 +158,7 @@ ROOT_URLCONF = 'terraza.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR), 'build'],
+        'DIRS': [os.path.join(BASE_DIR), 'build', os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -213,6 +213,9 @@ EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = True
 print(EMAIL_HOST_PASSWORD)
 
+# Default from email for Django emails
+DEFAULT_FROM_EMAIL = env("EMAIL_HOST_USER", default="noreply@terrazapineda.com")
+
 # DJANGO REST FRAMEWORK
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
@@ -248,6 +251,31 @@ DJOSER = {
     'SEND_ACTIVATION_EMAIL': True,
     'ACTIVATION_URL': 'auth/activate/{uid}/{token}',
     'PASSWORD_RESET_CONFIRM_URL': 'auth/password/reset/confirm/{uid}/{token}',
+    
+    # Custom email templates
+    'EMAIL': {
+        'activation': 'email/activation.html',
+        'password_reset': 'email/password_reset.html',
+        'username_reset': 'email/username_reset.html',
+    },
+    
+    # Email customization
+    'ACTIVATION_EMAIL_SUBJECT': 'Activa tu cuenta - Terraza Pineda',
+    'PASSWORD_RESET_EMAIL_SUBJECT': 'Restablece tu contraseña - Terraza Pineda',
+    'USERNAME_RESET_EMAIL_SUBJECT': 'Confirma tu nuevo email - Terraza Pineda',
+    
+    # Additional settings
+    'SEND_CONFIRMATION_EMAIL': True,
+    'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': True,
+    'USERNAME_RESET_SHOW_EMAIL_NOT_FOUND': True,
+    
+    # Frontend URLs (you can customize these)
+    'ACTIVATION_URL': 'auth/activate/{uid}/{token}',
+    'PASSWORD_RESET_CONFIRM_URL': 'auth/password/reset/confirm/{uid}/{token}',
+    'USERNAME_RESET_CONFIRM_URL': 'auth/username/reset/confirm/{uid}/{token}',
+    
+    # Email from address
+    'EMAIL_FROM': 'noreply@terrazapineda.com',
 }
 
 STRIPE_PUBLIC_KEY = env("STRIPE_PUBLIC_KEY")
