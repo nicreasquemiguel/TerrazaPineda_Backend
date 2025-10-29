@@ -328,7 +328,7 @@ class BookingStatusCountsView(APIView):
         return Response(status_counts)
 
 class BookedDatesView(APIView):
-    permission_classes = []
+    permission_classes = [permissions.AllowAny]
     authentication_classes = []
 
     def get(self, request, *args, **kwargs):
