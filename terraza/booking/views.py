@@ -328,17 +328,21 @@ class BookingStatusCountsView(APIView):
         return Response(status_counts)
 
 class BookedDatesView(APIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = []
     authentication_classes = []
+    
+    def get_permissions(self):
+        return []  # Explicitly return empty permissions
+    
+    def get_authenticators(self):
+        return []  # Explicitly return empty authenticators
 
     def get(self, request, *args, **kwargs):
         venue_id = request.query_params.get('venue')
         qs = Booking.objects.exclude(status__in=['cancelado', 'rechazado'])
         if venue_id:
             qs = qs.filter(venue_id=venue_id)
-        # Debug: Print the actual start_datetime values
-        for booking in qs:
-            print(f"Booking {booking.id}: start_datetime={booking.start_datetime}, date={booking.start_datetime.date()}")
+        
         booked = [
             {
                 'date': booking.start_datetime.date().isoformat(),
