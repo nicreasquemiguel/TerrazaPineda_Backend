@@ -329,6 +329,7 @@ class BookingStatusCountsView(APIView):
 
 class BookedDatesView(APIView):
     permission_classes = []
+    authentication_classes = []
 
     def get(self, request, *args, **kwargs):
         venue_id = request.query_params.get('venue')
