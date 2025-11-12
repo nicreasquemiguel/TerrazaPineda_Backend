@@ -46,7 +46,7 @@ ALLOWED_HOSTS = [
     '54.172.191.58',
     '127.0.0.1',
     '54.146.18.92',
-    'localhost'
+    'localhost',
 ]
 
 
@@ -57,7 +57,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Para desarrollo local
     "http://192.168.100.10:5173",  # Para desarrollo en red local
     "https://54.146.18.92",
-    "http://54.146.18.92"
+    "http://54.146.18.92",
+    "https://api.terrazapineda.com",
+    "http://api.terrazapineda.com",
 ]
 
 CORS_ALLOW_METHODS = [
@@ -84,6 +86,8 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CSRF_TRUSTED_ORIGINS = [
     "https://terrazapineda.com",
     "https://www.terrazapineda.com",
+    "https://api.terrazapineda.com",
+    "http://api.terrazapineda.com",
     "http://localhost:5173",
     "http://192.168.100.10:5173",
     "http://localhost:8000",
@@ -121,7 +125,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-
+    'corsheaders',
     #Internal apps
     'booking',
     'users',
@@ -158,7 +162,7 @@ ROOT_URLCONF = 'terraza.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR), 'build'],
+        'DIRS': [os.path.join(BASE_DIR), 'build', os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -213,6 +217,9 @@ EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = True
 print(EMAIL_HOST_PASSWORD)
 
+# Default from email for Django emails
+DEFAULT_FROM_EMAIL = env("EMAIL_HOST_USER", default="noreply@terrazapineda.com")
+
 # DJANGO REST FRAMEWORK
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
@@ -242,12 +249,36 @@ DJOSER = {
         'user_create': 'users.serializers.UserCreateSerializer',
         'user': 'users.serializers.UserSerializer',
         'current_user': 'users.serializers.UserSerializer',
-        # add others as needed
     },
     'TOKEN_MODEL': None,
     'SEND_ACTIVATION_EMAIL': True,
     'ACTIVATION_URL': 'auth/activate/{uid}/{token}',
     'PASSWORD_RESET_CONFIRM_URL': 'auth/password/reset/confirm/{uid}/{token}',
+    
+    # Custom email templates
+    'EMAIL': {
+        'activation': 'email/activation.html',
+        'password_reset': 'email/password_reset.html',
+        'username_reset': 'email/username_reset.html',
+    },
+    
+    # Email customization
+    'ACTIVATION_EMAIL_SUBJECT': 'Activa tu cuenta - Terraza Pineda',
+    'PASSWORD_RESET_EMAIL_SUBJECT': 'Restablece tu contraseña - Terraza Pineda',
+    'USERNAME_RESET_EMAIL_SUBJECT': 'Confirma tu nuevo email - Terraza Pineda',
+    
+    # Additional settings
+    'SEND_CONFIRMATION_EMAIL': True,
+    'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': False,  # Changed to False to avoid 400 errors
+    'USERNAME_RESET_SHOW_EMAIL_NOT_FOUND': False,  # Changed to False to avoid 400 errors
+    
+    # Frontend URLs (you can customize these)
+    'ACTIVATION_URL': 'auth/activate/{uid}/{token}',
+    'PASSWORD_RESET_CONFIRM_URL': 'auth/password/reset/confirm/{uid}/{token}',
+    'USERNAME_RESET_CONFIRM_URL': 'auth/username/reset/confirm/{uid}/{token}',
+    
+    # Email from address
+    'EMAIL_FROM': 'noreply@terrazapineda.com',
 }
 
 STRIPE_PUBLIC_KEY = env("STRIPE_PUBLIC_KEY")
