@@ -1,8 +1,8 @@
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter
 from .views import DashboardViewSet, DashboardStatsViewSet
 
-router = DefaultRouter()
+router = SimpleRouter()
 router.register('dashboard', DashboardViewSet, basename='dashboard')
 router.register('stats', DashboardStatsViewSet, basename='dashboard-stats')
 

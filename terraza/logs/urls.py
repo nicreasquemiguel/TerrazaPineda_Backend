@@ -1,11 +1,11 @@
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter
 from .views import (
     ActivityLogViewSet, BookingLogViewSet, PaymentLogViewSet,
     UserActivityLogViewSet, SystemLogViewSet, AuditLogViewSet
 )
 
-router = DefaultRouter()
+router = SimpleRouter()
 router.register('activity', ActivityLogViewSet, basename='activity-logs')
 router.register('booking', BookingLogViewSet, basename='booking-logs')
 router.register('payment', PaymentLogViewSet, basename='payment-logs')

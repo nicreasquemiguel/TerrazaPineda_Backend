@@ -1,5 +1,5 @@
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter
 from .views import (
     BookingViewSet,
     VenueViewSet,
@@ -12,7 +12,7 @@ from .views import (
     ReviewViewSet,
 )
 
-router = DefaultRouter()
+router = SimpleRouter()
 router.register(r'bookings', BookingViewSet, basename='booking')
 router.register(r'venues', VenueViewSet, basename='venue')
 router.register(r'packages', PackageViewSet, basename='package')
