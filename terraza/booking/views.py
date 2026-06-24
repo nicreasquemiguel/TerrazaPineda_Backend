@@ -268,6 +268,7 @@ class BookingViewSet(viewsets.ModelViewSet):
 
 
     def create(self, request, *args, **kwargs):
+        from django.core.exceptions import ValidationError as DjangoValidationError
         try:
             response = super().create(request, *args, **kwargs)
             return response
@@ -281,6 +282,9 @@ class BookingViewSet(viewsets.ModelViewSet):
                 {"detail": f"Database constraint error: {str(e)}"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        except DjangoValidationError as e:
+            errors = e.message_dict if hasattr(e, 'message_dict') else {'detail': e.messages}
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response(
                 {"detail": f"An unexpected error occurred: {str(e)}"},
