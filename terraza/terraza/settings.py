@@ -95,7 +95,8 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8000",
     "http://192.168.100.10:8000",
     "http://54.146.18.92:8000",
-    "https://54.146.18.92:8000"
+    "https://54.146.18.92:8000",
+    "https://terrazapineda-backend.onrender.com"
 ]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
