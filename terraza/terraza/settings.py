@@ -211,7 +211,6 @@ EMAIL_HOST_USER = env("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 
 EMAIL_USE_TLS = True
-print(EMAIL_HOST_PASSWORD)
 
 # Default from email for Django emails
 DEFAULT_FROM_EMAIL = env("EMAIL_HOST_USER", default="noreply@terrazapineda.com")
