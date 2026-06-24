@@ -3,11 +3,11 @@ attrs==26.1.0
 boto3==1.34.138
 botocore==1.34.138
 certifi==2024.2.2
-cffi==1.16.0
+cffi>=1.16.0
 charset-normalizer==3.3.2
 coreapi==2.3.3
 coreschema==0.0.4
-cryptography==42.0.5
+cryptography>=42.0.5
 defusedxml==0.8.0rc2
 dj-database-url==3.1.2
 Django>=5.2,<6.0
@@ -41,7 +41,7 @@ psycopg==3.2.13
 psycopg-binary==3.2.13
 psycopg2-binary==2.9.12
 pycparser==2.22
-PyJWT==2.8.0
+PyJWT>=2.8.0
 python-dateutil==2.9.0.post0
 python-decouple==3.8
 python-dotenv==1.0.1
