@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 from pathlib import Path
 import os
 import boto3
+import dj_database_url
 from environs import Env
 from datetime import timedelta
 
@@ -42,6 +43,7 @@ ALLOWED_HOSTS = [
     'api.terrazapineda.com',
     'terrazapineda.com',
     'www.terrazapineda.com',
+    '.onrender.com',
     '54.144.65.30',
     '54.172.191.58',
     '127.0.0.1',
@@ -148,6 +150,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -184,28 +187,20 @@ WSGI_APPLICATION = 'terraza.wsgi.application'
 # Database
 # https://docs.djangoproject.com/ef543fffnzz l,/4.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'terraza',
-        'USER': 'mixel',
-        'PASSWORD' : '3NsZ1ufzxQnu4uvkMmhZ',
-        'HOST' : 'localhost', 
-        'PORT': '5432',
+_DATABASE_URL = os.environ.get("DATABASE_URL")
+if _DATABASE_URL:
+    DATABASES = {"default": dj_database_url.parse(_DATABASE_URL, conn_max_age=600)}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'terraza',
+            'USER': 'mixel',
+            'PASSWORD': '3NsZ1ufzxQnu4uvkMmhZ',
+            'HOST': 'localhost',
+            'PORT': '5432',
+        }
     }
-}
-
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': env("AWS_DB_NAME"),
-#         'USER': env("AWS_DB_USER"),
-#         'PASSWORD' : env("AWS_DB_PASSWORD"),
-#         'HOST' : env("AWS_DB_HOST"),
-#         'PORT': '5432',
-#     }
-# }
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -353,18 +348,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
 STATIC_URL = '/static/'
-
-# Archivos estáticos de las apps + /static en desarrollo
-# STATICFILES_DIRS = [
-#     os.path.join(BASE_DIR, 'static')
-# ]
-
-# Carpeta donde se copiarán todos los estáticos al hacer collectstatic
-DEBUG = False
-
-
-
-STATIC_ROOT = '/home/ec2-user/server/TerrazaPineda_Backend/terraza/staticfiles'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 
 MEDIA_URL = '/media/'
