@@ -141,7 +141,8 @@ INSTALLED_APPS = [
     'djoser',
     'rest_framework_simplejwt.token_blacklist',
     'social_django',
-    'drf_spectacular'
+    'drf_spectacular',
+    'django_filters',
 
     
 ]
