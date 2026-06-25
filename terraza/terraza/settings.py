@@ -250,14 +250,7 @@ DJOSER = {
     'SEND_ACTIVATION_EMAIL': True,
     'ACTIVATION_URL': 'auth/activate/{uid}/{token}',
     'PASSWORD_RESET_CONFIRM_URL': 'auth/password/reset/confirm/{uid}/{token}',
-    
-    # Custom email templates
-    'EMAIL': {
-        'activation': 'email/activation.html',
-        'password_reset': 'email/password_reset.html',
-        'username_reset': 'email/username_reset.html',
-    },
-    
+
     # Email customization
     'ACTIVATION_EMAIL_SUBJECT': 'Activa tu cuenta - Terraza Pineda',
     'PASSWORD_RESET_EMAIL_SUBJECT': 'Restablece tu contraseña - Terraza Pineda',

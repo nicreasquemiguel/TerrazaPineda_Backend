@@ -1,4 +1,4 @@
-#!/Users/mixel/dev/backend/venv/bin/python3.10
+#!/home/miguel/dev/tp/TerrazaPineda_Backend/venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys
