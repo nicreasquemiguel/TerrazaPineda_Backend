@@ -337,7 +337,7 @@ class BookedDatesView(APIView):
 
     def get(self, request, *args, **kwargs):
         venue_id = request.query_params.get('venue')
-        qs = Booking.objects.exclude(status__in=['cancelado', 'rechazado'])
+        qs = Booking.objects.exclude(status__in=['cancelado', 'rechazado', 'finalizado'])
         if venue_id:
             qs = qs.filter(venue_id=venue_id)
         
