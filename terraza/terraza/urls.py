@@ -22,7 +22,7 @@ from django.conf.urls.static import static
 
 from booking.views import *
 from django.views.generic import TemplateView
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import DefaultRouter, SimpleRouter
 
 from rest_framework import permissions
 from drf_spectacular.views import (
@@ -30,16 +30,23 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
     SpectacularRedocView,
 )
+from users.views import SafeUserViewSet
 
 
 # router = DefaultRouter()
 # # router.register('lugares', VenueViewSet, basename='lugares')
 # router.register('orders', OrdersView, basename='orders')
 
+_user_router = SimpleRouter()
+_user_router.register('users', SafeUserViewSet)
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    # SafeUserViewSet wraps user creation in a transaction so a failed
+    # activation email rolls back the DB insert (prevents orphaned accounts).
+    path('auth/', include(_user_router.urls)),
 
     # Djoser auth endpoints: registration, login, logout, password reset, activation, token management
     path('auth/', include('djoser.urls')),

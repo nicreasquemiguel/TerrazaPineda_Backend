@@ -1,11 +1,19 @@
 from django.shortcuts import render
+from django.db import transaction
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status
 from rest_framework.response import Response
+from djoser.views import UserViewSet as DjoserUserViewSet
 
 from .serializers import ProfileSerializer, UserProfileUpdateSerializer
 from .models import UserAccount, Profile
+
+
+class SafeUserViewSet(DjoserUserViewSet):
+    @transaction.atomic
+    def perform_create(self, serializer):
+        super().perform_create(serializer)
 
 
 class ProfileView(generics.RetrieveUpdateAPIView):
