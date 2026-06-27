@@ -98,7 +98,7 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
                 mode="payment",
                 line_items=[{
                     "price_data": {
-                        "currency": "ars",
+                        "currency": "mxn",
                         "product_data": {
                             "name": f"Reserva en {booking.venue.name}",
                             "description": f"Paquete: {booking.package.title}",
