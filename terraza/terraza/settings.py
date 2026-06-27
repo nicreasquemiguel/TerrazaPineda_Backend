@@ -238,7 +238,7 @@ REST_FRAMEWORK = {
 DOMAIN =  env("DOMAIN")
 
 
-SITE_URL_FRONTEND = env("FRONTEND_URL", default="https://terrazapineda.com")
+SITE_URL_FRONTEND = env("FRONTEND_URL", default="https://terrazapineda.com").strip()
 
 #DJOSER
 DJOSER = {

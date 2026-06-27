@@ -90,8 +90,12 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
 
         # Handle different payment gateways
         if gateway == "stripe":
+            success_url = f"{settings.SITE_URL_FRONTEND}/detalle-reserva/{booking.id}"
+            cancel_url = f"{settings.SITE_URL_FRONTEND}/detalle-reserva/{booking.id}"
+            print(f"DEBUG: Stripe success_url={repr(success_url)}")
             session = stripe.checkout.Session.create(
                 payment_method_types=["card"],
+                mode="payment",
                 line_items=[{
                     "price_data": {
                         "currency": "ars",
@@ -112,8 +116,8 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
                         "gateway": str(gateway)
                     }
                 },
-                success_url=f"{settings.SITE_URL_FRONTEND}/detalle-reserva/{booking.id}",
-                cancel_url=f"{settings.SITE_URL_FRONTEND}/detalle-reserva/{booking.id}",
+                success_url=success_url,
+                cancel_url=cancel_url,
             )
             order.external_session_id = session.id
             order.payment_url = session.url
