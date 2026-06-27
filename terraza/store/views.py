@@ -112,8 +112,8 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
                         "gateway": str(gateway)
                     }
                 },
-                success_url=f"http://localhost:3000/detalle-reserva/{booking.id}",
-                cancel_url=f"http://localhost:3000/detalle-reserva/{booking.id}",
+                success_url=f"{settings.SITE_URL_FRONTEND}/detalle-reserva/{booking.id}",
+                cancel_url=f"{settings.SITE_URL_FRONTEND}/detalle-reserva/{booking.id}",
             )
             order.external_session_id = session.id
             order.payment_url = session.url
@@ -121,8 +121,33 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
             return Response({"payment_url": session.url, "order_id": order.id})
 
         elif gateway == "mercadopago":
-            # TODO: Implement MercadoPago checkout
-            return Response({"error": "MercadoPago not yet implemented"}, status=400)
+            preference_data = {
+                "items": [{
+                    "title": f"Reserva en {booking.venue.name} - {booking.package.name}",
+                    "quantity": 1,
+                    "unit_price": float(order.amount_due),
+                    "currency_id": "ARS",
+                }],
+                "external_reference": str(order.id),
+                "back_urls": {
+                    "success": f"{settings.SITE_URL_FRONTEND}/detalle-reserva/{booking.id}",
+                    "failure": f"{settings.SITE_URL_FRONTEND}/detalle-reserva/{booking.id}",
+                    "pending": f"{settings.SITE_URL_FRONTEND}/detalle-reserva/{booking.id}",
+                },
+                "auto_return": "approved",
+            }
+            preference_response = mercado.preference().create(preference_data)
+            preference = preference_response["response"]
+            if preference_response["status"] not in (200, 201):
+                return Response({"error": "MercadoPago preference creation failed", "detail": preference}, status=502)
+            order.external_session_id = preference["id"]
+            order.payment_url = preference.get("init_point", "")
+            order.save()
+            return Response({
+                "preference_id": preference["id"],
+                "payment_url": preference.get("init_point", ""),
+                "order_id": order.id,
+            })
 
         elif gateway == "transfer":       
             print(f"DEBUG: Entering transfer gateway logic")
