@@ -13,7 +13,7 @@ from .models import PaymentOrder, Payment, RefundRequest
 from .serializers import PaymentOrderSerializer, PaymentSerializer, RefundRequestSerializer
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
-mercado = mercadopago.SDK("your_mercadopago_access_token")
+mercado = mercadopago.SDK(settings.MERCADO_PAGO_ACCESS_TOKEN)
 
 
 class PaymentOrderViewSet(viewsets.ModelViewSet):

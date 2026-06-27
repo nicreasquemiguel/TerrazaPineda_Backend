@@ -19,13 +19,15 @@ from datetime import timedelta
 
 
 
-env = Env()
-env.read_env()
-
-
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+env = Env()
+ENV_PATH = BASE_DIR.parent / ".env"
+if ENV_PATH.exists():
+    env.read_env(ENV_PATH)
+else:
+    env.read_env()
 
 
 SITE_URL = env("SITE_URL")
@@ -49,6 +51,7 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     '54.146.18.92',
     'localhost',
+    '0.0.0.0'
 ]
 
 
@@ -191,7 +194,7 @@ WSGI_APPLICATION = 'terraza.wsgi.application'
 
 _DATABASE_URL = os.environ.get("DATABASE_URL")
 if _DATABASE_URL:
-    DATABASES = {"default": dj_database_url.parse(_DATABASE_URL, conn_max_age=600)}
+    DATABASES = {"default": dj_database_url.parse(_DATABASE_URL, conn_max_age=60, conn_health_checks=True)}
 else:
     DATABASES = {
         'default': {
@@ -273,6 +276,9 @@ DJOSER = {
 STRIPE_PUBLIC_KEY = env("STRIPE_PUBLIC_KEY")
 STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_KEY = env("STRIPE_WEBHOOK_KEY")
+
+MERCADO_PAGO_PUBLIC_KEY = env("MERCADO_PAGO_PUBLIC_KEY")
+MERCADO_PAGO_ACCESS_TOKEN = env("MERCADO_PAGO_ACCESS_TOKEN")
 
 
 # Social Auth settings (example with Google)
