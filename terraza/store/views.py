@@ -126,7 +126,6 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
                     "title": f"Reserva en {booking.venue.name} - {booking.package.title}",
                     "quantity": 1,
                     "unit_price": float(order.amount_due),
-                    "currency_id": "ARS",
                 }],
                 "external_reference": str(order.id),
                 "back_urls": {
