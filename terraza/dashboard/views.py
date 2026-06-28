@@ -300,13 +300,20 @@ class DashboardViewSet(viewsets.ViewSet):
         reason = serializer.validated_data.get('reason', '')
         
         try:
-            payment = Payment.objects.get(
-                id=payment_id,
-                status='pending',
-                method__in=['cash', 'transfer']
-            )
+            payment = Payment.objects.get(id=payment_id)
         except Payment.DoesNotExist:
-            return Response({'error': 'Payment not found or not eligible for approval'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Payment not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if payment.status != 'pending':
+            return Response(
+                {'error': f'Payment is already {payment.status} and cannot be reviewed'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if payment.method not in ['cash', 'transfer']:
+            return Response(
+                {'error': f'Payment method "{payment.method}" cannot be manually approved — only cash and transfer payments require admin review'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         
         if action == 'approve':
             payment.status = 'paid'
