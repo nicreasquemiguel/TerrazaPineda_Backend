@@ -152,12 +152,10 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
                 "order_id": order.id,
             })
 
-        elif gateway == "transfer":       
-            print(f"DEBUG: Entering transfer gateway logic")
-            # For transfers, allow multiple pending payments until manually verified
-            # Don't check order.status since we want to allow multiple pending transfers
-            
-            print(f"DEBUG: Creating transfer payment")
+        elif gateway == "transfer":
+            if not amount or float(amount) <= 0:
+                return Response({"error": "amount is required and must be greater than 0 for transfer payments"}, status=400)
+
             payment_data = {
                 "order": order,
                 "user": order.user,

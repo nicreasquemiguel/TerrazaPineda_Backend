@@ -275,7 +275,6 @@ class BookingUpdateSerializer(serializers.ModelSerializer):
             'start_datetime',
             'end_datetime',
             'status',
-            'advance_paid',
         ]
 
     def update(self, instance, validated_data):
