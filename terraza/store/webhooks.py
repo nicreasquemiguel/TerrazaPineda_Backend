@@ -55,7 +55,9 @@ def stripe_webhook_view(request):
             print(order_id)
         
         order = PaymentOrder.objects.get(id=order_id)
-        if order.status != "paid":
+        # Guard by transaction_id so duplicate webhook deliveries don't create duplicate payments
+        # and partial-payment orders (status=pending) can still receive additional payments
+        if not Payment.objects.filter(transaction_id=payment_intent_id).exists():
             Payment.objects.create(
                 order=order,
                 user=order.user,
@@ -66,7 +68,7 @@ def stripe_webhook_view(request):
                 transaction_id=payment_intent_id,
                 paid_at=now()
             )
-            # The signal will handle updating booking.advance_paid automatically!
+            # Signal handles updating booking.advance_paid, booking.status, and order.amount_due
             
             # if order.booking.advance_paid >= order.booking.total_price:
             #     order.status = "paid"

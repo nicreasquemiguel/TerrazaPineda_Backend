@@ -43,6 +43,7 @@ class PaymentOrderSerializer(serializers.ModelSerializer):
             "start_datetime": obj.booking.start_datetime,
             "end_datetime": obj.booking.end_datetime,
             "total_price": obj.booking.total_price,
+            "total_paid": obj.booking.advance_paid or 0,
             "status": obj.booking.status,
         }
 

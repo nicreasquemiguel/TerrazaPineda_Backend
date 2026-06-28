@@ -1,54 +1,43 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import Payment
-from booking.models import Booking
 from django.db.models import Sum
+from .models import Payment, PaymentOrder
+from booking.models import Booking
 
 
 @receiver(post_save, sender=Payment)
-def update_booking_status_on_payment(sender, instance, created, **kwargs):
-    if created and instance.status == "paid":
-        booking = instance.order.booking
+def sync_payment_state(sender, instance, created, **kwargs):
+    """
+    Keep order.amount_due, order.status, booking.advance_paid, and booking.status
+    in sync whenever a payment is marked paid — whether created or updated (e.g. admin approval).
+    """
+    if instance.status != 'paid':
+        return
 
-        advance_payment_amount = getattr(booking, "advance_payment_amount", 0)
-        total_amount = booking.total_price
+    order = instance.order
+    booking = order.booking
 
-        # Sum all paid payments for this booking’s orders
-        paid_payments_sum = Payment.objects.filter(
-            order__booking=booking,
-            status="paid"
-        ).aggregate(total_paid=Sum("amount"))["total_paid"] or 0
+    # Aggregate across ALL orders for this booking so multi-order edge cases are handled
+    total_paid = Payment.objects.filter(
+        order__booking=booking,
+        status='paid'
+    ).aggregate(total=Sum('amount'))['total'] or 0
 
-        # Check and update status based on sums and current booking status
-        if booking.status == "aceptacion":
-            if paid_payments_sum >= advance_payment_amount and advance_payment_amount > 0:
-                booking.status = "apartado"
-                booking.save()
-            elif advance_payment_amount == 0 and paid_payments_sum >= total_amount:
-                booking.status = "liquidado"
-                booking.save()
+    # --- Update booking ---
+    booking.advance_paid = total_paid
+    advance_amount = getattr(booking, 'advance_payment_amount', 0) or 0
 
-        elif booking.status == "apartado":
-            remaining = total_amount - advance_payment_amount
-            if paid_payments_sum >= total_amount:
-                booking.status = "liquidado"
-                booking.save()
+    if total_paid >= booking.total_price:
+        booking.status = 'liquidado'
+    elif advance_amount > 0 and total_paid >= advance_amount and booking.status == 'aceptacion':
+        booking.status = 'apartado'
 
+    booking.save()
 
-@receiver(post_save, sender=Payment)
-def update_booking_advance_paid(sender, instance, created, **kwargs):
-    """Automatically update booking advance_paid when a payment is created"""
-    if created and instance.status == 'paid':
-        booking = instance.order.booking
-        # Sum all paid payments for this booking
-        total_paid = sum(
-            payment.amount 
-            for payment in instance.order.payments.filter(status='paid')
-        )
-        booking.advance_paid = total_paid
-        booking.save()
-        
-        # Check if booking is fully paid and update order status
-        if booking.advance_paid >= booking.total_price:
-            instance.order.status = "paid"
-            instance.order.save()
+    # --- Update order (bypass save() to avoid recalculation loop) ---
+    remaining = max(0, booking.total_price - total_paid)
+    new_status = 'paid' if remaining <= 0 else order.status
+    PaymentOrder.objects.filter(pk=order.pk).update(
+        amount_due=remaining,
+        status=new_status,
+    )

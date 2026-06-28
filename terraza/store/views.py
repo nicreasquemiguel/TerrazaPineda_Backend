@@ -36,7 +36,7 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
         payment_data = {
             "order": order.id,
             "user": request.user.id,
-            "amount": order.amount_due,
+            "amount": order.calculated_amount_due,
             "method": request.data.get("method", "card"),
             "status": "paid",
             "transaction_id": request.data.get("transaction_id", "MOCK123"),
@@ -103,7 +103,7 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
                             "name": f"Reserva en {booking.venue.name}",
                             "description": f"Paquete: {booking.package.title}",
                         },
-                        "unit_amount": int((float(amount) if amount else float(order.amount_due)) * 100),
+                        "unit_amount": int((float(amount) if amount else float(order.calculated_amount_due)) * 100),
                     },
                     "quantity": 1,
                 }],
@@ -129,7 +129,7 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
                 "items": [{
                     "title": f"Reserva en {booking.venue.name} - {booking.package.title}",
                     "quantity": 1,
-                    "unit_price": float(amount) if amount else float(order.amount_due),
+                    "unit_price": float(amount) if amount else float(order.calculated_amount_due),
                 }],
                 "external_reference": str(order.id),
                 "back_urls": {
