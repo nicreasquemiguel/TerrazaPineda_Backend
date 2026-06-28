@@ -103,7 +103,7 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
                             "name": f"Reserva en {booking.venue.name}",
                             "description": f"Paquete: {booking.package.title}",
                         },
-                        "unit_amount": int(float(order.amount_due) * 100),
+                        "unit_amount": int((float(amount) if amount else float(order.amount_due)) * 100),
                     },
                     "quantity": 1,
                 }],
