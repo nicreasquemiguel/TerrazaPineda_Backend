@@ -291,6 +291,22 @@ class BookingViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    def update(self, request, *args, **kwargs):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        try:
+            response = super().update(request, *args, **kwargs)
+            return response
+        except DjangoValidationError as e:
+            errors = e.message_dict if hasattr(e, 'message_dict') else {'detail': e.messages}
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            import traceback
+            print(f"[BookingViewSet.update] Unexpected error: {traceback.format_exc()}")
+            return Response(
+                {"detail": f"An unexpected error occurred: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 class VenueViewSet(viewsets.ModelViewSet):
     queryset = Venue.objects.all()
     serializer_class = VenueSerializer

@@ -120,8 +120,6 @@ class BookingSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
-        extras_price = sum([s.price for s in instance.extra_services.all()])
-        instance.total_price = instance.package.price + extras_price
         instance.save()
         return instance
 
