@@ -2,11 +2,15 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from .models import Booking, Notification
 
-# Import custom email service
 try:
     from users.email_service import TerrazaEmailService
 except ImportError:
     TerrazaEmailService = None
+
+try:
+    from . import google_calendar as gcal
+except ImportError:
+    gcal = None
 
 @receiver(pre_save, sender=Booking)
 def booking_status_change_notification(sender, instance, **kwargs):
@@ -55,9 +59,7 @@ def booking_status_change_notification(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Booking)
 def booking_created_notification(sender, instance, created, **kwargs):
-    """
-    Send confirmation email when a new booking is created
-    """
+    """Send confirmation email when a new booking is created."""
     if created and TerrazaEmailService:
         try:
             TerrazaEmailService.send_booking_confirmation(
@@ -65,4 +67,27 @@ def booking_created_notification(sender, instance, created, **kwargs):
                 booking=instance
             )
         except Exception as e:
-            print(f"Error sending booking confirmation email: {e}") 
+            print(f"Error sending booking confirmation email: {e}")
+
+
+@receiver(post_save, sender=Booking)
+def sync_booking_to_google_calendar(sender, instance, created, **kwargs):
+    """Create or update a Google Calendar event whenever a booking is saved."""
+    if not gcal:
+        return
+
+    if created:
+        event_id = gcal.create_event(instance)
+        if event_id:
+            # Use update_fields to avoid triggering signals recursively
+            Booking.objects.filter(pk=instance.pk).update(google_calendar_event_id=event_id)
+            instance.google_calendar_event_id = event_id
+    else:
+        if instance.google_calendar_event_id:
+            gcal.update_event(instance, instance.google_calendar_event_id)
+        else:
+            # No event ID yet — create it now
+            event_id = gcal.create_event(instance)
+            if event_id:
+                Booking.objects.filter(pk=instance.pk).update(google_calendar_event_id=event_id)
+                instance.google_calendar_event_id = event_id

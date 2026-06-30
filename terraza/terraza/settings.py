@@ -364,6 +364,14 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
+# Google Calendar integration (Service Account)
+# Set GOOGLE_SERVICE_ACCOUNT_JSON to the full JSON content of your service account key,
+# or GOOGLE_SERVICE_ACCOUNT_KEY_FILE to the path of the key file.
+# GOOGLE_CALENDAR_ID is the calendar to sync to — use 'primary' or a specific calendar ID.
+GOOGLE_SERVICE_ACCOUNT_JSON = env("GOOGLE_SERVICE_ACCOUNT_JSON", default=None)
+GOOGLE_SERVICE_ACCOUNT_KEY_FILE = env("GOOGLE_SERVICE_ACCOUNT_KEY_FILE", default=None)
+GOOGLE_CALENDAR_ID = env("GOOGLE_CALENDAR_ID", default="primary")
+
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Booking API',
     'DESCRIPTION': 'API for event venue booking system',

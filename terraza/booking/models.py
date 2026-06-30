@@ -112,9 +112,8 @@ class Booking(models.Model):
     visible_to_users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="visible_bookings", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     slug = models.SlugField(unique=True, blank=True, null=True)
-    
-    
-        
+    google_calendar_event_id = models.CharField(max_length=255, blank=True, null=True, editable=False)
+
     class Meta:
         indexes = [
             models.Index(fields=["start_datetime", "end_datetime"]),
