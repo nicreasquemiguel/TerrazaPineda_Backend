@@ -8,7 +8,6 @@ from rest_framework.response import Response
 from djoser.views import UserViewSet as DjoserUserViewSet
 from djoser import signals as djoser_signals
 from djoser.conf import settings as djoser_settings
-from djoser.utils import get_user_email
 import logging
 
 from .serializers import ProfileSerializer, UserProfileUpdateSerializer
@@ -28,7 +27,7 @@ class SafeUserViewSet(DjoserUserViewSet):
             )
 
         context = {"user": user}
-        to = [get_user_email(user)]
+        to = [user.email]
         try:
             if djoser_settings.SEND_ACTIVATION_EMAIL:
                 djoser_settings.EMAIL.activation(self.request, context).send(to)
