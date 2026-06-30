@@ -53,7 +53,7 @@
                                 Tu evento ha sido agendado exitosamente. Aquí están los detalles de tu reserva.
                             </p>
 
-                            <!-- Date/venue info box -->
+                            <!-- Date/venue/package info box -->
                             <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb;border-radius:8px;margin-bottom:24px;">
                                 <tr>
                                     <td style="padding:16px 20px;border-bottom:1px solid #f3f4f6;">
@@ -63,12 +63,19 @@
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td style="padding:16px 20px;">
+                                    <td style="padding:16px 20px;{% if booking.package %}border-bottom:1px solid #f3f4f6;{% endif %}">
                                         <p style="margin:0 0 2px;font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Lugar</p>
                                         <p style="margin:0;font-size:16px;font-weight:700;color:#111827;">{{ booking.venue.name }}</p>
-                                        {% if booking.package %}<p style="margin:2px 0 0;font-size:14px;color:#6b7280;">{{ booking.package.title }}</p>{% endif %}
                                     </td>
                                 </tr>
+                                {% if booking.package %}
+                                <tr>
+                                    <td style="padding:16px 20px;">
+                                        <p style="margin:0 0 2px;font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Paquete</p>
+                                        <p style="margin:0;font-size:16px;font-weight:700;color:#111827;">{{ booking.package }}</p>
+                                    </td>
+                                </tr>
+                                {% endif %}
                             </table>
 
                             <!-- Divider -->
