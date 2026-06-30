@@ -121,27 +121,60 @@ class Booking(models.Model):
         ordering = ['start_datetime']
         # Note: Removed the unique constraint as it was too restrictive
         # Now we handle date conflicts in the save method and validation
-  # Calculate total price based on package, extras, and coupon discount
+  # Calculate total price — uses locked line items when available, falls back to live prices
     def calculate_total(self):
+        if self.pk:
+            line_items = self.line_items.all()
+            if line_items.exists():
+                total = sum(item.unit_price * item.quantity for item in line_items)
+                return total.quantize(Decimal('0.01'))
+
+        # Fallback: live prices (first save, or legacy bookings without line items)
         total = Decimal('0.00')
         package = getattr(self, 'package', None)
         if package is not None:
             total = Decimal(str(package.price))
-        
-        # Handle extra services - check if we can access them
         try:
-            if hasattr(self, 'extra_services') and self.pk:  # Only if object is saved
+            if hasattr(self, 'extra_services') and self.pk:
                 for extra in self.extra_services.all():
                     total += extra.price
         except Exception:
-            # If we can't access extra_services yet, skip them
             pass
-            
         coupon = getattr(self, 'coupon', None)
         if coupon is not None and hasattr(coupon, 'is_valid') and coupon.is_valid():
             discount = Decimal('1') - (coupon.discount_percent / Decimal('100'))
             total *= discount
         return total.quantize(Decimal('0.01'))
+
+    def create_line_items(self):
+        """Snapshot current package, extra services, and coupon into immutable line items."""
+        self.line_items.all().delete()
+        items = []
+        if self.package:
+            items.append(BookingLineItem(
+                booking=self,
+                item_type='package',
+                description=str(self.package),
+                unit_price=Decimal(str(self.package.price)),
+            ))
+        for extra in self.extra_services.all():
+            items.append(BookingLineItem(
+                booking=self,
+                item_type='extra_service',
+                description=extra.name,
+                unit_price=extra.price,
+            ))
+        coupon = getattr(self, 'coupon', None)
+        if coupon and coupon.is_valid():
+            subtotal = sum(i.unit_price for i in items)
+            discount_amount = -(subtotal * coupon.discount_percent / Decimal('100')).quantize(Decimal('0.01'))
+            items.append(BookingLineItem(
+                booking=self,
+                item_type='discount',
+                description=f'Descuento {coupon.code} ({coupon.discount_percent}%)',
+                unit_price=discount_amount,
+            ))
+        BookingLineItem.objects.bulk_create(items)
 
     # Override save to set total_price and slug correctly
     def save(self, *args, **kwargs):
@@ -394,3 +427,22 @@ class Review(models.Model):
         return f"Review {self.rating}/5 by {self.user} for Booking {self.booking_id}"
 
 
+class BookingLineItem(models.Model):
+    ITEM_TYPE_CHOICES = [
+        ('package', 'Package'),
+        ('extra_service', 'Extra Service'),
+        ('discount', 'Discount'),
+    ]
+
+    booking = models.ForeignKey(Booking, related_name='line_items', on_delete=models.CASCADE)
+    item_type = models.CharField(max_length=20, choices=ITEM_TYPE_CHOICES)
+    description = models.CharField(max_length=255)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    quantity = models.PositiveIntegerField(default=1)
+
+    @property
+    def subtotal(self):
+        return self.unit_price * self.quantity
+
+    def __str__(self):
+        return f"{self.description}: ${self.unit_price}"

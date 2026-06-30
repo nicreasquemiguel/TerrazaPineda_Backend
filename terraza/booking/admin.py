@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Package, ExtraService, Rule, Venue, Coupon, Booking, VenueFeatures, BookingWish, Notification
+from .models import Package, ExtraService, Rule, Venue, Coupon, Booking, VenueFeatures, BookingWish, Notification, BookingLineItem
 
 @admin.register(Package)
 class PackageAdmin(admin.ModelAdmin):
@@ -34,6 +34,20 @@ class CouponAdmin(admin.ModelAdmin):
     search_fields = ['code']
     readonly_fields = ['current_uses']
 
+class BookingLineItemInline(admin.TabularInline):
+    model = BookingLineItem
+    extra = 0
+    readonly_fields = ['item_type', 'description', 'unit_price', 'quantity', 'subtotal']
+    can_delete = False
+
+    def subtotal(self, obj):
+        return obj.subtotal
+    subtotal.short_description = 'Subtotal'
+
+    def has_add_permission(self, _request, _obj=None):
+        return False
+
+
 @admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):
     list_display = ['id', 'user', 'venue', 'package', 'start_datetime', 'end_datetime', 'total_price', 'status', 'created_at']
@@ -42,6 +56,13 @@ class BookingAdmin(admin.ModelAdmin):
     readonly_fields = ['id', 'created_at', 'total_price']
     filter_horizontal = ['extra_services', 'visible_to_users']
     date_hierarchy = 'start_datetime'
+    inlines = [BookingLineItemInline]
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        form.instance.create_line_items()
+        form.instance.total_price = form.instance.calculate_total()
+        form.instance.save(update_fields=['total_price'])
 
 @admin.register(VenueFeatures)
 class VenueFeaturesAdmin(admin.ModelAdmin):
