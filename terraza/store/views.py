@@ -140,6 +140,7 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
                 },
                 "auto_return": "approved",
             }
+            print(f"[MercadoPago] back_urls={preference_data['back_urls']}")
             preference_response = mercado.preference().create(preference_data)
             print(f"[MercadoPago] status={preference_response['status']} response={preference_response['response']}")
             preference = preference_response["response"]
