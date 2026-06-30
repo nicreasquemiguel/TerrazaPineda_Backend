@@ -241,7 +241,7 @@ REST_FRAMEWORK = {
 DOMAIN =  env("DOMAIN")
 
 
-SITE_URL_FRONTEND = env("FRONTEND_URL", default="https://terrazapineda.com").strip()
+SITE_URL_FRONTEND = env("FRONTEND_URL", default="https://terrazapineda.com").strip().rstrip("\\n").strip()
 
 #DJOSER
 CONTACT_EMAIL = env("CONTACT_EMAIL", default=env("EMAIL_HOST_USER", default="terrazapineda7@gmail.com"))
