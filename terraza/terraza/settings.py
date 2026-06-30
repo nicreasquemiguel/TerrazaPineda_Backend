@@ -59,8 +59,10 @@ CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     "https://terrazapineda.com",
     "https://www.terrazapineda.com",
-    "http://localhost:5173",  # Para desarrollo local
-    "http://192.168.100.10:5173",  # Para desarrollo en red local
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://192.168.100.10:5173",
+    "http://192.168.100.10:3000",
     "https://54.146.18.92",
     "http://54.146.18.92",
     "https://api.terrazapineda.com",
@@ -94,7 +96,9 @@ CSRF_TRUSTED_ORIGINS = [
     "https://api.terrazapineda.com",
     "http://api.terrazapineda.com",
     "http://localhost:5173",
+    "http://localhost:3000",
     "http://192.168.100.10:5173",
+    "http://192.168.100.10:3000",
     "http://localhost:8000",
     "http://192.168.100.10:8000",
     "http://54.146.18.92:8000",
@@ -150,7 +154,6 @@ INSTALLED_APPS = [
 
     
 ]
-CORS_ALLOW_ALL_ORIGINS = True
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
