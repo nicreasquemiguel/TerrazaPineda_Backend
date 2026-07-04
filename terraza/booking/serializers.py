@@ -95,18 +95,16 @@ class BookingSerializer(serializers.ModelSerializer):
         venue = Venue.objects.get(id=venue_data['id'])
         package = Package.objects.get(id=package_data['id'])
 
-        # Check if the date is available (one event per day per venue)
+        # Check if the time range is available (overlap detection, handles after-midnight)
         start_datetime = validated_data.get('start_datetime')
-        
-        if start_datetime and hasattr(start_datetime, 'date'):
-            if not Booking.is_date_available(
-                venue=venue,
-                date=start_datetime.date()
-            ):
+        end_datetime = validated_data.get('end_datetime')
+
+        if start_datetime and end_datetime:
+            if not Booking.is_date_available(venue=venue, start_datetime=start_datetime, end_datetime=end_datetime):
                 from rest_framework.exceptions import ValidationError
                 raise ValidationError({
-                    'start_datetime': 'This date is not available for the selected venue.',
-                    'end_datetime': 'This date is not available for the selected venue.'
+                    'start_datetime': 'This time range is not available for the selected venue.',
+                    'end_datetime': 'This time range is not available for the selected venue.',
                 })
 
         booking = Booking.objects.create(venue=venue, package=package, **validated_data)

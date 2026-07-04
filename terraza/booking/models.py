@@ -268,58 +268,66 @@ class Booking(models.Model):
         return None
 
     @classmethod
-    def is_date_available(cls, venue, date, exclude_booking_id=None):
+    def is_date_available(cls, venue, start_datetime, end_datetime, exclude_booking_id=None):
         """
-        Check if a date is available for a venue
-        Only considers active bookings (not rejected, cancelled, or finished)
-        One event per day per venue
+        Check if a time range is available for a venue using overlap detection.
+        Handles bookings that go past midnight correctly.
         """
-        # Get all active bookings for this venue on this date
         active_statuses = ['solicitud', 'aceptacion', 'apartado', 'liquidado', 'liquidado_entregado', 'entregado']
-        
+
         conflicting_bookings = cls.objects.filter(
             venue=venue,
-            start_datetime__date=date,
-            status__in=active_statuses
-        ).exclude(
-            id=exclude_booking_id
-        )
-        
+            start_datetime__lt=end_datetime,
+            end_datetime__gt=start_datetime,
+            status__in=active_statuses,
+        ).exclude(id=exclude_booking_id)
+
         return not conflicting_bookings.exists()
 
     @classmethod
     def get_available_dates(cls, venue, start_date=None, end_date=None, days_ahead=30):
         """
-        Get available dates for a specific venue
-        Returns list of available dates
+        Get available dates for a specific venue using time-overlap detection.
+        A date is unavailable if any booking's time range overlaps with any part of that day.
+        Handles bookings that run past midnight correctly.
         """
         from django.utils import timezone
         import datetime
-        
+
         if not start_date:
             start_date = timezone.now().date()
         if not end_date:
             end_date = start_date + datetime.timedelta(days=days_ahead)
-        
-        # Get all active bookings for this venue in the date range
+
         active_statuses = ['solicitud', 'aceptacion', 'apartado', 'liquidado', 'liquidado_entregado', 'entregado']
-        
-        booked_dates = cls.objects.filter(
+
+        use_tz = timezone.is_aware(timezone.now())
+
+        def make_dt(d, t=datetime.time.min):
+            combined = datetime.datetime.combine(d, t)
+            return timezone.make_aware(combined) if use_tz else combined
+
+        # Fetch all bookings that could overlap with any day in range
+        range_start = make_dt(start_date)
+        range_end = make_dt(end_date + datetime.timedelta(days=1))
+
+        bookings = list(cls.objects.filter(
             venue=venue,
-            start_datetime__date__range=[start_date, end_date],
-            status__in=active_statuses
-        ).values_list('start_datetime__date', flat=True)
-        
-        booked_dates = set(booked_dates)
-        
-        # Generate all dates in range
+            status__in=active_statuses,
+            start_datetime__lt=range_end,
+            end_datetime__gt=range_start,
+        ).values_list('start_datetime', 'end_datetime'))
+
         available_dates = []
         current_date = start_date
         while current_date <= end_date:
-            if current_date not in booked_dates:
+            day_start = make_dt(current_date)
+            day_end = make_dt(current_date + datetime.timedelta(days=1))
+            is_booked = any(b_start < day_end and b_end > day_start for b_start, b_end in bookings)
+            if not is_booked:
                 available_dates.append(current_date)
             current_date += datetime.timedelta(days=1)
-        
+
         return available_dates
 
     def _generate_unique_slug(self):
@@ -380,18 +388,17 @@ class Booking(models.Model):
         
         # Check if this is a new booking or status is being changed to active
         if self.pk is None or self.status in ['solicitud', 'aceptacion', 'apartado', 'liquidado', 'liquidado_entregado', 'entregado']:
-            # Check for date conflicts (one event per day per venue)
-            if (self.venue and self.start_datetime and 
-                hasattr(self.start_datetime, 'date')):
+            if self.venue and self.start_datetime and self.end_datetime:
                 is_available = self.is_date_available(
-                    self.venue, 
-                    self.start_datetime.date(), 
-                    exclude_booking_id=self.pk
+                    self.venue,
+                    self.start_datetime,
+                    self.end_datetime,
+                    exclude_booking_id=self.pk,
                 )
                 if not is_available:
                     raise ValidationError({
-                        'start_datetime': 'This date is not available for the selected venue.',
-                        'end_datetime': 'This date is not available for the selected venue.'
+                        'start_datetime': 'This time range is not available for the selected venue.',
+                        'end_datetime': 'This time range is not available for the selected venue.',
                     })
         
         super().clean()
