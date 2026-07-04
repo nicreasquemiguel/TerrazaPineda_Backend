@@ -90,7 +90,7 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
 
         # Handle different payment gateways
         if gateway == "stripe":
-            success_url = f"{settings.SITE_URL_FRONTEND}/detalle-reserva/{booking.id}"
+            success_url = f"{settings.SITE_URL_FRONTEND}/detalle-reserva/{booking.id}?session_id={{CHECKOUT_SESSION_ID}}"
             cancel_url = f"{settings.SITE_URL_FRONTEND}/detalle-reserva/{booking.id}"
             print(f"DEBUG: Stripe success_url={repr(success_url)}")
             session = stripe.checkout.Session.create(
