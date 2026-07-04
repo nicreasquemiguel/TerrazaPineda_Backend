@@ -1,4 +1,5 @@
-from .models import Booking, ExtraService, Package, Venue, BookingWish, Notification, Review, BookingLineItem
+import datetime as dt_module
+from .models import Booking, ExtraService, Package, Venue, BookingWish, Notification, Review, BookingLineItem, VenueConfiguration
 from users.serializers import UserSerializer
 from rest_framework import serializers
 
@@ -9,6 +10,12 @@ class BookingLineItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = BookingLineItem
         fields = ['id', 'item_type', 'description', 'unit_price', 'quantity', 'subtotal']
+
+class VenueConfigurationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VenueConfiguration
+        fields = ['open_time', 'close_time']
+
 
 class PackageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -225,7 +232,36 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         extra_service_ids = validated_data.pop('extra_service_ids', [])
 
         from rest_framework.exceptions import ValidationError
-        
+        from django.utils import timezone as tz
+
+        # Apply configured open/close hours to start/end datetimes.
+        # Staff can override by providing a non-midnight time; non-staff always get config hours.
+        config = VenueConfiguration.get_config()
+        request_user = self.context['request'].user
+        is_staff = getattr(request_user, 'is_staff', False)
+
+        def is_midnight(datetime_val):
+            if datetime_val is None:
+                return True
+            t = tz.localtime(datetime_val).time() if tz.is_aware(datetime_val) else datetime_val.time()
+            return t == dt_module.time(0, 0, 0)
+
+        def apply_time(datetime_val, time_val):
+            if datetime_val is None:
+                return datetime_val
+            if tz.is_aware(datetime_val):
+                local_dt = tz.localtime(datetime_val)
+                combined = dt_module.datetime.combine(local_dt.date(), time_val)
+                return tz.make_aware(combined)
+            return dt_module.datetime.combine(datetime_val.date(), time_val)
+
+        if 'start_datetime' in validated_data:
+            if not is_staff or is_midnight(validated_data['start_datetime']):
+                validated_data['start_datetime'] = apply_time(validated_data['start_datetime'], config.open_time)
+        if 'end_datetime' in validated_data:
+            if not is_staff or is_midnight(validated_data['end_datetime']):
+                validated_data['end_datetime'] = apply_time(validated_data['end_datetime'], config.close_time)
+
         # Get venue - allow venue_id in request or use default
         venue_id = self.context.get('venue_id', 1)
         try:

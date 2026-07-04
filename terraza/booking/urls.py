@@ -10,6 +10,7 @@ from .views import (
     BookingWishViewSet,
     NotificationViewSet,
     ReviewViewSet,
+    VenueConfigurationView,
 )
 
 router = SimpleRouter()
@@ -25,4 +26,5 @@ urlpatterns = [
     path('', include(router.urls)),
     path('status-counts/', BookingStatusCountsView.as_view(), name='booking-status-counts'),
     path('booked-dates/', BookedDatesView.as_view(), name='booked-dates'),
+    path('configuration/', VenueConfigurationView.as_view(), name='venue-configuration'),
 ]

@@ -1,9 +1,19 @@
 from django.contrib import admin
-from .models import Package, ExtraService, Rule, Venue, Coupon, Booking, VenueFeatures, BookingWish, Notification, BookingLineItem
+from .models import Package, ExtraService, Rule, Venue, Coupon, Booking, VenueFeatures, BookingWish, Notification, BookingLineItem, VenueConfiguration
+
+@admin.register(VenueConfiguration)
+class VenueConfigurationAdmin(admin.ModelAdmin):
+    list_display = ['open_time', 'close_time']
+
+    def has_add_permission(self, request):
+        return not VenueConfiguration.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 @admin.register(Package)
 class PackageAdmin(admin.ModelAdmin):
-    list_display = ['title', 'n_people', 'price', 'hours']
+    list_display = ['title', 'n_people', 'price']
     list_filter = ['n_people']
     search_fields = ['title', 'description']
     ordering = ['n_people']

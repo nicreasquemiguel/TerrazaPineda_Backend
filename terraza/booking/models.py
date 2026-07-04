@@ -19,12 +19,35 @@ ICON_TYPE= (
 )
 
 
+class VenueConfiguration(models.Model):
+    open_time = models.TimeField(default=datetime.time(10, 0))
+    close_time = models.TimeField(default=datetime.time(22, 0))
+
+    class Meta:
+        verbose_name = "Configuración del Venue"
+        verbose_name_plural = "Configuración del Venue"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_config(cls):
+        obj, _ = cls.objects.get_or_create(pk=1, defaults={
+            'open_time': datetime.time(10, 0),
+            'close_time': datetime.time(22, 0),
+        })
+        return obj
+
+    def __str__(self):
+        return f"Horario: {self.open_time.strftime('%H:%M')} - {self.close_time.strftime('%H:%M')}"
+
+
 class Package(models.Model):
     n_people = models.IntegerField(default=30)
     price = models.FloatField()
     title = models.CharField(max_length = 255, blank = True)
     description = models.TextField()
-    hours = models.TextField()
     icon = models.CharField(max_length=100, blank=True)
     slug = models.SlugField(unique=True, blank=True, null=True)
 

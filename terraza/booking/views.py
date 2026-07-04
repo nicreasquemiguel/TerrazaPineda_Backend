@@ -9,8 +9,8 @@ from django.utils import timezone
 from rest_framework.decorators import action
 
 from .filters import BookingFilter
-from .models import Booking, ExtraService, Venue, Package, BookingWish, Notification, Review
-from .serializers import BookingSerializer, ExtraServiceSerializer, PackageSerializer, VenueSerializer, BookingCreateSerializer, BookingUpdateSerializer, BookingWishSerializer, NotificationSerializer, ReviewSerializer
+from .models import Booking, ExtraService, Venue, Package, BookingWish, Notification, Review, VenueConfiguration
+from .serializers import BookingSerializer, ExtraServiceSerializer, PackageSerializer, VenueSerializer, BookingCreateSerializer, BookingUpdateSerializer, BookingWishSerializer, NotificationSerializer, ReviewSerializer, VenueConfigurationSerializer
 from .serializers import BookingListSerializer
 
 # Import logging utilities
@@ -449,4 +449,29 @@ class ReviewViewSet(viewsets.ModelViewSet):
             serializer.is_valid(raise_exception=True)
             instance = serializer.save(user=request.user, booking=booking)
         return Response(self.get_serializer(instance).data)
-    
+
+
+class VenueConfigurationView(APIView):
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
+
+    def get(self, request):
+        config = VenueConfiguration.get_config()
+        serializer = VenueConfigurationSerializer(config)
+        return Response(serializer.data)
+
+    def put(self, request):
+        config = VenueConfiguration.get_config()
+        serializer = VenueConfigurationSerializer(config, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def patch(self, request):
+        config = VenueConfiguration.get_config()
+        serializer = VenueConfigurationSerializer(config, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
