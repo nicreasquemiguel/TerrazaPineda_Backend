@@ -1,6 +1,14 @@
-from .models import Booking, ExtraService, Package, Venue, BookingWish, Notification, Review
+from .models import Booking, ExtraService, Package, Venue, BookingWish, Notification, Review, BookingLineItem
 from users.serializers import UserSerializer
 from rest_framework import serializers
+
+
+class BookingLineItemSerializer(serializers.ModelSerializer):
+    subtotal = serializers.DecimalField(source='subtotal', read_only=True, max_digits=10, decimal_places=2)
+
+    class Meta:
+        model = BookingLineItem
+        fields = ['id', 'item_type', 'description', 'unit_price', 'quantity', 'subtotal']
 
 class PackageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -25,6 +33,7 @@ class BookingSerializer(serializers.ModelSerializer):
     venue = VenueSerializer()
     extra_services = ExtraServiceSerializer(many=True, required=False)
     rejection_reason = serializers.SerializerMethodField()
+    line_items = BookingLineItemSerializer(many=True, read_only=True)
 
     class Meta:
         model = Booking
@@ -44,6 +53,7 @@ class BookingSerializer(serializers.ModelSerializer):
             'coupon',
             'created_at',
             'rejection_reason',
+            'line_items',
         ]
 
     def get_rejection_reason(self, obj):
@@ -96,12 +106,14 @@ class BookingSerializer(serializers.ModelSerializer):
             service = ExtraService.objects.get(id=service_data['id'])
             booking.extra_services.add(service)
 
-        extras_price = sum([s.price for s in booking.extra_services.all()])
-        booking.total_price = package.price + extras_price
+        booking.create_line_items()
+        booking.total_price = booking.calculate_total()
         booking.save()
         return booking
 
     def update(self, instance, validated_data):
+        composition_changed = False
+
         if 'venue' in validated_data:
             venue_data = validated_data.pop('venue')
             instance.venue = Venue.objects.get(id=venue_data['id'])
@@ -109,6 +121,7 @@ class BookingSerializer(serializers.ModelSerializer):
         if 'package' in validated_data:
             package_data = validated_data.pop('package')
             instance.package = Package.objects.get(id=package_data['id'])
+            composition_changed = True
 
         if 'extra_services' in validated_data:
             extra_services_data = validated_data.pop('extra_services')
@@ -116,16 +129,20 @@ class BookingSerializer(serializers.ModelSerializer):
             for service_data in extra_services_data:
                 service = ExtraService.objects.get(id=service_data['id'])
                 instance.extra_services.add(service)
+            composition_changed = True
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+
+        if composition_changed:
+            instance.create_line_items()
 
         instance.save()
         return instance
 
 class BookingListSerializer(serializers.ModelSerializer):
     package_name = serializers.CharField(source='package.title', read_only=True)
-    package_price = serializers.DecimalField(source='package.price', read_only=True, max_digits=10, decimal_places=2)
+    package_price = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     extras_with_prices = serializers.SerializerMethodField()
     rejection_reason = serializers.SerializerMethodField()
@@ -169,14 +186,18 @@ class BookingListSerializer(serializers.ModelSerializer):
                 return None
         return None
 
+    def get_package_price(self, obj):
+        line_item = obj.line_items.filter(item_type='package').first()
+        if line_item:
+            return str(line_item.unit_price)
+        return str(obj.package.price) if obj.package else None
+
     def get_extras_with_prices(self, obj):
-        return [
-            {
-                'name': extra.name,
-                'price': str(extra.price)
-            }
-            for extra in obj.extra_services.all()
-        ]
+        line_items = obj.line_items.filter(item_type='extra_service')
+        if line_items.exists():
+            return [{'name': item.description, 'price': str(item.unit_price)} for item in line_items]
+        # Fallback for legacy bookings without line items
+        return [{'name': extra.name, 'price': str(extra.price)} for extra in obj.extra_services.all()]
 
 class BookingCreateSerializer(serializers.ModelSerializer):
     package_id = serializers.IntegerField(write_only=True)
@@ -255,6 +276,9 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         for service in services:
             booking.extra_services.add(service)
 
+        booking.create_line_items()
+        booking.total_price = booking.calculate_total()
+        booking.save()
         return booking
 
 class BookingUpdateSerializer(serializers.ModelSerializer):
@@ -277,32 +301,35 @@ class BookingUpdateSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         from rest_framework.exceptions import ValidationError
-        
+        composition_changed = False
+
         # Handle package update
         if 'package_id' in validated_data:
             package_id = validated_data.pop('package_id')
             try:
-                package = Package.objects.get(id=package_id)
-                instance.package = package
+                instance.package = Package.objects.get(id=package_id)
+                composition_changed = True
             except Package.DoesNotExist:
                 raise ValidationError({'package_id': 'Package does not exist.'})
 
         # Handle extra services update
         if 'extra_service_ids' in validated_data:
             extra_service_ids = validated_data.pop('extra_service_ids')
-            # Clear existing extra services
             instance.extra_services.clear()
-            # Add new extra services
             for service_id in extra_service_ids:
                 try:
                     service = ExtraService.objects.get(id=service_id)
                     instance.extra_services.add(service)
                 except ExtraService.DoesNotExist:
                     raise ValidationError({'extra_service_ids': f'ExtraService with id {service_id} does not exist.'})
+            composition_changed = True
 
         # Update other fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+
+        if composition_changed:
+            instance.create_line_items()
 
         instance.save()
         return instance

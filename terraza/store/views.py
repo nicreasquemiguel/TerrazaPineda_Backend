@@ -129,6 +129,7 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
                 "items": [{
                     "title": f"Reserva en {booking.venue.name} - {booking.package.title}",
                     "quantity": 1,
+                    "currency_id": "MXN",
                     "unit_price": float(amount) if amount else float(order.calculated_amount_due),
                 }],
                 "external_reference": str(order.id),
@@ -140,7 +141,9 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
                 "auto_return": "approved",
                 "notification_url": f"{settings.SITE_URL}/api/store/webhooks/mercadopago/",
             }
+            print(f"[MercadoPago] back_urls={preference_data['back_urls']}")
             preference_response = mercado.preference().create(preference_data)
+            print(f"[MercadoPago] status={preference_response['status']} response={preference_response['response']}")
             preference = preference_response["response"]
             if preference_response["status"] not in (200, 201):
                 return Response({"error": "MercadoPago preference creation failed", "detail": preference}, status=502)

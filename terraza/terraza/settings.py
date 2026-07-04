@@ -42,18 +42,18 @@ SECRET_KEY = env("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool("DEBUG", default=False)  # Cambiar a False en producción
 ALLOWED_HOSTS = [
-    'api.terrazapineda.com',
-    'terrazapineda.com',
-    'www.terrazapineda.com',
-    '.onrender.com',
-    '54.144.65.30',
-    '54.172.191.58',
-    '127.0.0.1',
-    '54.146.18.92',
-    'localhost',
-    '0.0.0.0'
+    "api.terrazapineda.com",
+    "terrazapineda.com",
+    "www.terrazapineda.com",
+    ".onrender.com",
+    "54.144.65.30",
+    "54.172.191.58",
+    "54.146.18.92",
+    "127.0.0.1",
+    "localhost",
+    "0.0.0.0",
+    "142.93.120.67",
 ]
-
 
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
@@ -241,9 +241,11 @@ REST_FRAMEWORK = {
 DOMAIN =  env("DOMAIN")
 
 
-SITE_URL_FRONTEND = env("FRONTEND_URL", default="https://terrazapineda.com").strip()
+SITE_URL_FRONTEND = env("FRONTEND_URL", default="https://terrazapineda.com").strip().rstrip("\\n").strip()
 
 #DJOSER
+CONTACT_EMAIL = env("CONTACT_EMAIL", default=env("EMAIL_HOST_USER", default="terrazapineda7@gmail.com"))
+
 DJOSER = {
     'USER_ID_FIELD': 'id',
     'LOGIN_FIELD': 'email',
@@ -252,28 +254,20 @@ DJOSER = {
         'user': 'users.serializers.UserSerializer',
         'current_user': 'users.serializers.UserSerializer',
     },
+    'EMAIL': {
+        'activation': 'users.emails.CustomActivationEmail',
+        'password_reset': 'users.emails.CustomPasswordResetEmail',
+        'username_reset': 'users.emails.CustomUsernameResetEmail',
+        'confirmation': 'users.emails.CustomConfirmationEmail',
+    },
     'TOKEN_MODEL': None,
     'SEND_ACTIVATION_EMAIL': True,
-    'ACTIVATION_URL': 'auth/activate/{uid}/{token}',
-    'PASSWORD_RESET_CONFIRM_URL': 'auth/password/reset/confirm/{uid}/{token}',
-
-    # Email customization
-    'ACTIVATION_EMAIL_SUBJECT': 'Activa tu cuenta - Terraza Pineda',
-    'PASSWORD_RESET_EMAIL_SUBJECT': 'Restablece tu contraseña - Terraza Pineda',
-    'USERNAME_RESET_EMAIL_SUBJECT': 'Confirma tu nuevo email - Terraza Pineda',
-    
-    # Additional settings
     'SEND_CONFIRMATION_EMAIL': True,
-    'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': False,  # Changed to False to avoid 400 errors
-    'USERNAME_RESET_SHOW_EMAIL_NOT_FOUND': False,  # Changed to False to avoid 400 errors
-    
-    # Frontend URLs (you can customize these)
+    'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': False,
+    'USERNAME_RESET_SHOW_EMAIL_NOT_FOUND': False,
     'ACTIVATION_URL': 'auth/activate/{uid}/{token}',
     'PASSWORD_RESET_CONFIRM_URL': 'auth/password/reset/confirm/{uid}/{token}',
     'USERNAME_RESET_CONFIRM_URL': 'auth/username/reset/confirm/{uid}/{token}',
-    
-    # Email from address
-    'EMAIL_FROM': 'noreply@terrazapineda.com',
 }
 
 STRIPE_PUBLIC_KEY = env("STRIPE_PUBLIC_KEY")

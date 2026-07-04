@@ -1,229 +1,131 @@
-<!DOCTYPE html>
+{% autoescape off %}{% block subject %}Activa tu cuenta - Terraza Pineda{% endblock subject %}{% block html_body %}<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Activa tu cuenta - Terraza Pineda</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #fefefe;
-        }
-        
-        .header {
-            background: linear-gradient(90deg, #7c3aed, #22d3ee);
-            color: white;
-            padding: 40px 20px;
-            text-align: center;
-            border-radius: 24px 24px 0 0;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(270deg, #7c3aed, #22d3ee, #f472b6, #7c3aed);
-            animation: gradientShift 8s ease infinite;
-            opacity: 0.3;
-        }
-        
-        @keyframes gradientShift {
-            0%, 100% { transform: rotate(0deg); }
-            50% { transform: rotate(180deg); }
-        }
-        
-        .header h1 {
-            font-weight: 800;
-            font-size: 2.5rem;
-            margin: 0;
-            position: relative;
-            z-index: 1;
-            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
-        }
-        
-        .logo {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 20px;
-            display: block;
-            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
-        }
-        
-        .content {
-            background: rgba(255, 255, 255, 0.8);
-            padding: 40px;
-            border-radius: 0 0 24px 24px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            backdrop-filter: blur(24px);
-        }
-        
-        .content h2 {
-            font-weight: 700;
-            font-size: 1.5rem;
-            color: #7c3aed;
-            margin-bottom: 20px;
-        }
-        
-        .button {
-            display: inline-block;
-            background: linear-gradient(90deg, #7c3aed, #22d3ee);
-            color: white;
-            padding: 16px 32px;
-            text-decoration: none;
-            border-radius: 12px;
-            margin: 24px 0;
-            font-weight: 600;
-            font-size: 1.1rem;
-            box-shadow: 0 10px 15px -3px rgba(124, 58, 237, 0.4);
-            transition: all 0.2s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 20px 25px -5px rgba(124, 58, 237, 0.4);
-        }
-        
-        .button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s;
-        }
-        
-        .button:hover::before {
-            left: 100%;
-        }
-        
-        .features {
-            background: rgba(124, 58, 237, 0.05);
-            border-radius: 16px;
-            padding: 24px;
-            margin: 24px 0;
-            border-left: 4px solid #7c3aed;
-        }
-        
-        .features ul {
-            list-style: none;
-            padding: 0;
-        }
-        
-        .features li {
-            padding: 8px 0;
-            position: relative;
-            padding-left: 24px;
-        }
-        
-        .features li::before {
-            content: '✨';
-            position: absolute;
-            left: 0;
-            top: 8px;
-        }
-        
-        .link-box {
-            background: rgba(255, 255, 255, 0.6);
-            padding: 16px;
-            border-radius: 12px;
-            margin: 16px 0;
-            word-break: break-all;
-            border: 1px solid rgba(124, 58, 237, 0.2);
-        }
-        
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            font-size: 14px;
-            color: #666;
-            background: rgba(255, 255, 255, 0.4);
-            padding: 24px;
-            border-radius: 16px;
-        }
-        
-        .brand-text {
-            background: linear-gradient(90deg, #7c3aed, #22d3ee);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: 800;
-        }
-    </style>
 </head>
-<body>
-    <div class="header">
-        <svg class="logo" viewBox="0 0 1066 1196" xmlns="http://www.w3.org/2000/svg">
-            <g transform="translate(0.000000,1196.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none">
-                <path d="M6603 11953 l-163 -3 0 -935 c0 -514 3 -935 8 -935 33 0 416 -65 509
-                -86 254 -56 504 -158 689 -280 120 -79 301 -261 382 -383 165 -250 247 -504
-                259 -796 11 -282 -48 -588 -154 -800 -157 -310 -382 -550 -639 -678 -238 -119
-                -483 -166 -1174 -222 -173 -14 -396 -34 -495 -45 -130 -14 -294 -21 -590 -25
-                -371 -6 -424 -9 -560 -31 -1050 -174 -1487 -356 -1940 -809 -573 -572 -818
-                -1345 -853 -2683 -5 -163 -6 -960 -4 -1769 l4 -1473 1119 0 1118 0 4 1623 c3
-                1452 5 1639 21 1782 62 582 142 873 290 1063 176 224 455 335 961 382 66 6
-                435 15 820 20 724 9 738 10 1100 60 1028 143 1598 343 2145 754 124 93 312
-                275 413 401 721 894 980 2395 622 3596 -116 388 -322 784 -571 1097 -104 131
-                -356 379 -481 475 -501 381 -1116 593 -1946 672 -142 13 -712 39 -727 33 -3
-                -2 -78 -4 -167 -5z"/>
-                <path d="M0 10995 l0 -955 920 0 920 0 2 -2282 c2 -1389 7 -2283 12 -2283 5 0
-                86 120 180 266 94 147 198 299 230 338 78 96 250 258 380 359 348 273 620 402
-                1236 583 113 34 215 67 227 75 l23 14 0 1475 0 1475 940 0 940 0 0 945 0 945
-                -3005 0 -3005 0 0 -955z"/>
-            </g>
-        </svg>
-        <h1>¡Bienvenido a Terraza Pineda!</h1>
-    </div>
-    
-    <div class="content">
-        <h2>Hola {{ user.first_name }},</h2>
-        
-        <p>¡Gracias por registrarte en Terraza Pineda! Estamos emocionados de tenerte como parte de nuestra comunidad de eventos especiales.</p>
-        
-        <p>Para completar tu registro y activar tu cuenta, por favor haz clic en el siguiente botón:</p>
-        
-        <div style="text-align: center;">
-            <a href="{{ domain }}/{{ url }}" class="button">Activar mi cuenta</a>
-        </div>
-        
-        <p>Si el botón no funciona, puedes copiar y pegar este enlace en tu navegador:</p>
-        <div class="link-box">
-            {{ domain }}/{{ url }}
-        </div>
-        
-        <div class="features">
-            <p><strong>¿Qué puedes hacer después de activar tu cuenta?</strong></p>
-            <ul>
-                <li>Reservar espacios para tus eventos especiales</li>
-                <li>Explorar nuestros paquetes y servicios adicionales</li>
-                <li>Gestionar tus reservas desde tu panel personal</li>
-                <li>Recibir notificaciones sobre el estado de tus eventos</li>
-            </ul>
-        </div>
-        
-        <p>Si tienes alguna pregunta, no dudes en contactarnos.</p>
-        
-        <p>¡Esperamos verte pronto!</p>
-        <p><strong class="brand-text">El equipo de Terraza Pineda</strong></p>
-    </div>
-    
-    <div class="footer">
-        <p>Este email fue enviado automáticamente. Por favor no respondas a este mensaje.</p>
-        <p class="brand-text">Terraza Pineda - Tu espacio perfecto para eventos especiales</p>
-    </div>
+<body style="margin:0;padding:0;background-color:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f5;padding:32px 16px;">
+        <tr>
+            <td align="center">
+                <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
+
+                    <!-- Success header -->
+                    <tr>
+                        <td style="background-color:#22c55e;border-radius:12px 12px 0 0;padding:24px 28px;text-align:left;">
+                            <table cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td style="vertical-align:middle;padding-right:12px;">
+                                        <div style="width:28px;height:28px;background-color:white;border-radius:50%;text-align:center;line-height:28px;font-size:16px;">✓</div>
+                                    </td>
+                                    <td style="vertical-align:middle;">
+                                        <span style="color:white;font-size:18px;font-weight:700;">Cuenta creada exitosamente</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Card body -->
+                    <tr>
+                        <td style="background-color:#ffffff;padding:28px;">
+
+                            <!-- Logo + brand -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+                                <tr>
+                                    <td align="center">
+                                        <svg width="36" height="40" viewBox="0 0 1066 1196" xmlns="http://www.w3.org/2000/svg">
+                                            <g transform="translate(0,1196) scale(0.1,-0.1)" fill="#111827" stroke="none">
+                                                <path d="M6603 11953 l-163 -3 0 -935 c0 -514 3 -935 8 -935 33 0 416 -65 509-86 254 -56 504 -158 689 -280 120 -79 301 -261 382 -383 165 -250 247 -504 259 -796 11 -282 -48 -588 -154 -800 -157 -310 -382 -550 -639 -678 -238 -119-483 -166 -1174 -222 -173 -14 -396 -34 -495 -45 -130 -14 -294 -21 -590 -25-371 -6 -424 -9 -560 -31 -1050 -174 -1487 -356 -1940 -809 -573 -572 -818-1345 -853 -2683 -5 -163 -6 -960 -4 -1769 l4 -1473 1119 0 1118 0 4 1623 c3 1452 5 1639 21 1782 62 582 142 873 290 1063 176 224 455 335 961 382 66 6 435 15 820 20 724 9 738 10 1100 60 1028 143 1598 343 2145 754 124 93 312 275 413 401 721 894 980 2395 622 3596 -116 388 -322 784 -571 1097 -104 131-356 379 -481 475 -501 381 -1116 593 -1946 672 -142 13 -712 39 -727 33 -3-2 -78 -4 -167 -5z"/>
+                                                <path d="M0 10995 l0 -955 920 0 920 0 2 -2282 c2 -1389 7 -2283 12 -2283 5 0 86 120 180 266 94 147 198 299 230 338 78 96 250 258 380 359 348 273 620 402 1236 583 113 34 215 67 227 75 l23 14 0 1475 0 1475 940 0 940 0 0 945 0 945-3005 0 -3005 0 0 -955z"/>
+                                            </g>
+                                        </svg>
+                                        <p style="margin:6px 0 0;font-size:13px;color:#6b7280;letter-spacing:0.05em;text-transform:uppercase;font-weight:600;">Terraza Pineda</p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Greeting -->
+                            <p style="margin:0 0 6px;font-size:15px;color:#6b7280;">Hola <strong style="color:#111827;">{{ user.first_name }}</strong>,</p>
+                            <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
+                                Activa tu cuenta haciendo clic en el botón de abajo para empezar a reservar espacios.
+                            </p>
+
+                            <!-- Activation info box -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb;border-radius:8px;margin-bottom:24px;">
+                                <tr>
+                                    <td style="padding:16px 20px;">
+                                        <p style="margin:0 0 2px;font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Correo registrado</p>
+                                        <p style="margin:0;font-size:16px;font-weight:700;color:#111827;">{{ user.email }}</p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- CTA button -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{ protocol }}://{{ domain }}/{{ url }}"
+                                           style="display:inline-block;border:2px solid #111827;color:#111827;font-size:14px;font-weight:600;padding:12px 32px;border-radius:8px;text-decoration:none;letter-spacing:0.02em;">
+                                            Activar mi cuenta
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Divider -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                                <tr>
+                                    <td style="border-top:1px solid #f3f4f6;font-size:0;">&nbsp;</td>
+                                </tr>
+                            </table>
+
+                            <!-- What's next section -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
+                                <tr>
+                                    <td style="border-bottom:1px solid #f3f4f6;padding:12px 0;">
+                                        <table width="100%" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td>
+                                                    <p style="margin:0;font-size:14px;font-weight:600;color:#111827;">Reserva tu evento</p>
+                                                    <p style="margin:2px 0 0;font-size:13px;color:#9ca3af;">Explora paquetes y disponibilidad</p>
+                                                </td>
+                                                <td align="right" style="color:#9ca3af;font-size:18px;">›</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:12px 0;">
+                                        <table width="100%" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td>
+                                                    <p style="margin:0;font-size:14px;font-weight:600;color:#111827;">¿Necesitas ayuda?</p>
+                                                    <p style="margin:2px 0 0;font-size:13px;color:#9ca3af;">Contáctanos en cualquier momento</p>
+                                                </td>
+                                                <td align="right" style="font-size:13px;color:#6b7280;font-weight:600;white-space:nowrap;">{{ contact_email }}</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color:#f9fafb;border-radius:0 0 12px 12px;padding:16px 28px;text-align:center;">
+                            <p style="margin:0;font-size:12px;color:#9ca3af;">Este email fue enviado automáticamente. Por favor no respondas a este mensaje.</p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+
 </body>
-</html>
+</html>{% endblock html_body %}{% endautoescape %}
