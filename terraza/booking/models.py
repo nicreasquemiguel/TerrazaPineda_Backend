@@ -113,6 +113,8 @@ class Booking(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     slug = models.SlugField(unique=True, blank=True, null=True)
     google_calendar_event_id = models.CharField(max_length=255, blank=True, null=True, editable=False)
+    date_changes_count = models.IntegerField(default=0)
+    cancellation_reason = models.TextField(blank=True, null=True)
 
     class Meta:
         indexes = [

@@ -53,7 +53,9 @@ class BookingSerializer(serializers.ModelSerializer):
             'coupon',
             'created_at',
             'rejection_reason',
+            'cancellation_reason',
             'line_items',
+            'date_changes_count',
         ]
 
     def get_rejection_reason(self, obj):
@@ -297,11 +299,30 @@ class BookingUpdateSerializer(serializers.ModelSerializer):
             'start_datetime',
             'end_datetime',
             'status',
+            'cancellation_reason',
         ]
 
     def update(self, instance, validated_data):
         from rest_framework.exceptions import ValidationError
+        from django.utils import timezone
+
         composition_changed = False
+        request = self.context.get('request')
+        is_staff = request and request.user.is_staff
+
+        # Enforce date change rules for non-staff users
+        new_start = validated_data.get('start_datetime')
+        if not is_staff and new_start is not None and new_start != instance.start_datetime:
+            if instance.date_changes_count >= 1:
+                raise ValidationError({
+                    'start_datetime': 'Solo se permite un cambio de fecha por evento.'
+                })
+            days_until_event = (instance.start_datetime.date() - timezone.now().date()).days
+            if days_until_event < 21:
+                raise ValidationError({
+                    'start_datetime': 'Los cambios de fecha deben solicitarse con al menos 3 semanas de anticipación.'
+                })
+            validated_data['date_changes_count'] = instance.date_changes_count + 1
 
         # Handle package update
         if 'package_id' in validated_data:
