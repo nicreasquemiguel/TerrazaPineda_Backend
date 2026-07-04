@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 
 class BookingLineItemSerializer(serializers.ModelSerializer):
-    subtotal = serializers.DecimalField(source='subtotal', read_only=True, max_digits=10, decimal_places=2)
+    subtotal = serializers.DecimalField(read_only=True, max_digits=10, decimal_places=2)
 
     class Meta:
         model = BookingLineItem
