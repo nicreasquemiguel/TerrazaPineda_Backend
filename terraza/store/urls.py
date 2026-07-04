@@ -12,7 +12,7 @@ router.register("refunds", RefundRequestViewSet, basename="refunds")
 
 urlpatterns = [
     path('webhooks/stripe/', stripe_webhook_view, name='stripe-webhook'),
-# path("webhooks/mercadopago/", mercadopago_webhook_view, name="mercadopago-webhook"),
+    path("webhooks/mercadopago/", mercadopago_webhook_view, name="mercadopago-webhook"),
 ]
 
 

@@ -138,6 +138,7 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
                     "pending": f"{settings.SITE_URL_FRONTEND}/detalle-reserva/{booking.id}",
                 },
                 "auto_return": "approved",
+                "notification_url": f"{settings.SITE_URL}/api/store/webhooks/mercadopago/",
             }
             preference_response = mercado.preference().create(preference_data)
             preference = preference_response["response"]

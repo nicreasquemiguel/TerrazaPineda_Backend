@@ -83,27 +83,52 @@ def stripe_webhook_view(request):
 
 @csrf_exempt
 def mercadopago_webhook_view(request):
-    
-    external_reference = request.GET.get("external_reference")
-    topic = request.GET.get("topic")
+    import mercadopago
+    mercado = mercadopago.SDK(settings.MERCADO_PAGO_ACCESS_TOKEN)
 
-    if topic == "payment" and external_reference:
+    topic = request.GET.get("topic") or request.GET.get("type")
+    payment_id = request.GET.get("id") or request.GET.get("data.id")
+
+    # Also handle JSON body format (newer webhook style)
+    if not payment_id and request.content_type == "application/json":
+        import json
         try:
-            order = PaymentOrder.objects.get(id=external_reference)
-            if order.status != "paid":
-                # You may want to query MercadoPago's API here for full validation
-                Payment.objects.create(
-                    order=order,
-                    user=order.user,
-                    amount=order.amount_due,
-                    method="paypal",
-                    status="paid",
-                    transaction_id=order.external_session_id,
-                    paid_at=now()
-                )
-                order.status = "paid"
-                order.save()
-        except PaymentOrder.DoesNotExist:
+            body = json.loads(request.body)
+            topic = body.get("type", topic)
+            payment_id = body.get("data", {}).get("id")
+        except (ValueError, KeyError):
             pass
+
+    if topic != "payment" or not payment_id:
+        return JsonResponse({"received": True})
+
+    try:
+        mp_response = mercado.payment().get(payment_id)
+        payment_data = mp_response.get("response", {})
+        if mp_response.get("status") not in (200, 201):
+            return JsonResponse({"received": True})
+
+        if payment_data.get("status") != "approved":
+            return JsonResponse({"received": True})
+
+        external_reference = payment_data.get("external_reference")
+        order = PaymentOrder.objects.get(id=external_reference)
+
+        if not Payment.objects.filter(transaction_id=str(payment_id)).exists():
+            amount = payment_data.get("transaction_amount", order.amount_due)
+            Payment.objects.create(
+                order=order,
+                user=order.user,
+                amount=amount,
+                method="card",
+                status="paid",
+                gateway="mercadopago",
+                transaction_id=str(payment_id),
+                paid_at=now()
+            )
+    except PaymentOrder.DoesNotExist:
+        pass
+    except Exception:
+        pass
 
     return JsonResponse({"received": True})
