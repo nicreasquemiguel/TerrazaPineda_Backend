@@ -139,6 +139,17 @@ class SocialAuthJWTView(APIView):
             if changed:
                 user.save(update_fields=['is_active', 'email_verified'])
 
+        # Save profile picture from social provider (only when it's still the default)
+        picture_url = user_info.get('picture')
+        if picture_url:
+            try:
+                profile = Profile.objects.get(user=user)
+                is_default = not profile.image or 'default_user' in str(profile.image)
+                if is_default:
+                    self._save_social_picture(profile, picture_url, user.id)
+            except Profile.DoesNotExist:
+                pass
+
         refresh = RefreshToken.for_user(user)
         return Response({
             'access': str(refresh.access_token),
@@ -161,6 +172,7 @@ class SocialAuthJWTView(APIView):
                 'email': idinfo.get('email'),
                 'first_name': idinfo.get('given_name', ''),
                 'last_name': idinfo.get('family_name', ''),
+                'picture': idinfo.get('picture'),
             }
         except Exception:
             pass
@@ -178,6 +190,7 @@ class SocialAuthJWTView(APIView):
                     'email': data.get('email'),
                     'first_name': data.get('given_name', ''),
                     'last_name': data.get('family_name', ''),
+                    'picture': data.get('picture'),
                 }
         except Exception as exc:
             logger.warning('Google userinfo fallback failed: %s', exc)
@@ -194,12 +207,35 @@ class SocialAuthJWTView(APIView):
             if resp.status_code == 200:
                 data = resp.json()
                 if 'error' not in data:
+                    fb_id = data.get('id')
                     return {
                         'email': data.get('email'),
                         'first_name': data.get('first_name', ''),
                         'last_name': data.get('last_name', ''),
+                        'picture': f'https://graph.facebook.com/{fb_id}/picture?type=large' if fb_id else None,
                     }
         except Exception as exc:
             logger.warning('Facebook token verification failed: %s', exc)
 
         return None
+
+    def _save_social_picture(self, profile, url, user_id):
+        try:
+            from django.core.files.base import ContentFile
+            import urllib.request
+            import os
+
+            with urllib.request.urlopen(url, timeout=10) as response:
+                image_data = response.read()
+
+            ext = 'jpg'
+            content_type = response.headers.get('Content-Type', '')
+            if 'png' in content_type:
+                ext = 'png'
+            elif 'webp' in content_type:
+                ext = 'webp'
+
+            filename = f'social_{user_id}.{ext}'
+            profile.image.save(filename, ContentFile(image_data), save=True)
+        except Exception as exc:
+            logger.warning('Failed to save social profile picture: %s', exc)
