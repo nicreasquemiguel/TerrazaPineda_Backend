@@ -103,13 +103,19 @@ class DashboardViewSet(viewsets.ViewSet):
         next_booking_data = None
         if next_booking_obj:
             client_name = f"{next_booking_obj.user.first_name or ''} {next_booking_obj.user.last_name or ''}".strip() or next_booking_obj.user.email
+            amount_due = float(next_booking_obj.total_price - next_booking_obj.advance_paid)
             next_booking_data = {
                 'booking_id': str(next_booking_obj.id),
                 'start_datetime': next_booking_obj.start_datetime.isoformat(),
                 'client_name': client_name,
+                'client_first_name': next_booking_obj.user.first_name or '',
+                'client_last_name': next_booking_obj.user.last_name or '',
+                'client_phone': getattr(next_booking_obj.user, 'phone', '') or '',
                 'package_name': next_booking_obj.package.title,
+                'people_count': next_booking_obj.package.n_people,
                 'status': next_booking_obj.status,
                 'total_price': float(next_booking_obj.total_price),
+                'amount_due': amount_due,
             }
 
         data = {
