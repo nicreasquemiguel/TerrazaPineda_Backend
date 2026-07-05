@@ -232,17 +232,9 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         from rest_framework.exceptions import ValidationError
         from django.utils import timezone as tz
 
-        # Apply configured open/close hours to start/end datetimes.
-        # Staff can override by providing a non-midnight time; non-staff always get config hours.
+        # Always apply configured open/close hours on create.
+        # Staff can override times by editing the booking after creation (PATCH/PUT).
         config = VenueConfiguration.get_config()
-        request_user = self.context['request'].user
-        is_staff = getattr(request_user, 'is_staff', False)
-
-        def is_midnight(datetime_val):
-            if datetime_val is None:
-                return True
-            t = tz.localtime(datetime_val).time() if tz.is_aware(datetime_val) else datetime_val.time()
-            return t == dt_module.time(0, 0, 0)
 
         def apply_time(datetime_val, time_val):
             if datetime_val is None:
@@ -254,11 +246,9 @@ class BookingCreateSerializer(serializers.ModelSerializer):
             return dt_module.datetime.combine(datetime_val.date(), time_val)
 
         if 'start_datetime' in validated_data:
-            if not is_staff or is_midnight(validated_data['start_datetime']):
-                validated_data['start_datetime'] = apply_time(validated_data['start_datetime'], config.open_time)
+            validated_data['start_datetime'] = apply_time(validated_data['start_datetime'], config.open_time)
         if 'end_datetime' in validated_data:
-            if not is_staff or is_midnight(validated_data['end_datetime']):
-                validated_data['end_datetime'] = apply_time(validated_data['end_datetime'], config.close_time)
+            validated_data['end_datetime'] = apply_time(validated_data['end_datetime'], config.close_time)
 
         # Get venue - allow venue_id in request or use default
         venue_id = self.context.get('venue_id', 1)
