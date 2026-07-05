@@ -45,13 +45,15 @@ class DashboardOverviewSerializer(serializers.Serializer):
     """Serializer for dashboard overview statistics"""
     # Current month metrics
     current_month = serializers.DictField()
-    # Last month metrics  
+    # Last month metrics
     last_month = serializers.DictField()
     # Percentage changes
     percentage_changes = serializers.DictField()
     # Overall statistics
     total_bookings = serializers.IntegerField()
     active_users = serializers.IntegerField()
+    # Next confirmed booking
+    next_booking = serializers.DictField(allow_null=True)
 
 class DailyCardsSerializer(serializers.Serializer):
     """Serializer for daily cards response"""

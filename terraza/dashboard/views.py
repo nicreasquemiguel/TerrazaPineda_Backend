@@ -92,7 +92,26 @@ class DashboardViewSet(viewsets.ViewSet):
         # Overall statistics
         total_bookings = Booking.objects.count()
         active_users = User.objects.filter(is_active=True).count()
-        
+
+        # Next upcoming booking with apartado or above status
+        CONFIRMED_STATUSES = ['apartado', 'liquidado', 'liquidado_entregado', 'entregado']
+        next_booking_obj = Booking.objects.filter(
+            start_datetime__gte=timezone.now(),
+            status__in=CONFIRMED_STATUSES
+        ).select_related('user', 'package').order_by('start_datetime').first()
+
+        next_booking_data = None
+        if next_booking_obj:
+            client_name = f"{next_booking_obj.user.first_name or ''} {next_booking_obj.user.last_name or ''}".strip() or next_booking_obj.user.email
+            next_booking_data = {
+                'booking_id': str(next_booking_obj.id),
+                'start_datetime': next_booking_obj.start_datetime.isoformat(),
+                'client_name': client_name,
+                'package_name': next_booking_obj.package.title,
+                'status': next_booking_obj.status,
+                'total_price': float(next_booking_obj.total_price),
+            }
+
         data = {
             # Current month metrics with comparisons
             'current_month': {
@@ -115,7 +134,9 @@ class DashboardViewSet(viewsets.ViewSet):
             },
             # Overall statistics
             'total_bookings': total_bookings,
-            'active_users': active_users
+            'active_users': active_users,
+            # Next confirmed booking
+            'next_booking': next_booking_data,
         }
         
         serializer = DashboardOverviewSerializer(data)
