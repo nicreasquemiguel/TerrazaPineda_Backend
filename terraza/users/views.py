@@ -5,9 +5,12 @@ from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from djoser.views import UserViewSet as DjoserUserViewSet
 from djoser import signals as djoser_signals
 from djoser.conf import settings as djoser_settings
+from rest_framework_simplejwt.tokens import RefreshToken
+import requests as http_requests
 import logging
 
 from .serializers import ProfileSerializer, UserProfileUpdateSerializer
@@ -69,3 +72,134 @@ class UserProfileAPIView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class SocialAuthJWTView(APIView):
+    """
+    Exchange a Google id_token or Facebook access_token for JWT tokens.
+
+    POST /api/users/social/jwt/
+    Body: { "provider": "google" | "facebook", "token": "<token>" }
+    Returns: { "access": "...", "refresh": "...", "created": true/false }
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        provider = request.data.get('provider', '').lower()
+        token = request.data.get('token', '').strip()
+
+        if not provider or not token:
+            return Response(
+                {'detail': 'Se requieren los campos provider y token.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if provider == 'google':
+            user_info = self._verify_google(token)
+        elif provider == 'facebook':
+            user_info = self._verify_facebook(token)
+        else:
+            return Response(
+                {'detail': f'Proveedor no soportado: {provider}'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if user_info is None:
+            return Response(
+                {'detail': 'Token inválido o expirado.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        email = user_info.get('email')
+        if not email:
+            return Response(
+                {'detail': 'El proveedor no devolvió un correo electrónico.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user, created = UserAccount.objects.get_or_create(
+            email=email,
+            defaults={
+                'first_name': user_info.get('first_name', ''),
+                'last_name': user_info.get('last_name', ''),
+                'is_active': True,
+                'email_verified': True,
+            },
+        )
+
+        if not created:
+            # Ensure existing accounts can log in via social (mark active/verified)
+            changed = False
+            if not user.is_active:
+                user.is_active = True
+                changed = True
+            if not user.email_verified:
+                user.email_verified = True
+                changed = True
+            if changed:
+                user.save(update_fields=['is_active', 'email_verified'])
+
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'created': created,
+        }, status=status.HTTP_200_OK)
+
+    def _verify_google(self, token):
+        try:
+            from google.oauth2 import id_token
+            from google.auth.transport import requests as google_requests
+            from django.conf import settings
+
+            # Try verifying as id_token first
+            client_id = settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY
+            idinfo = id_token.verify_oauth2_token(
+                token, google_requests.Request(), client_id if client_id else None
+            )
+            return {
+                'email': idinfo.get('email'),
+                'first_name': idinfo.get('given_name', ''),
+                'last_name': idinfo.get('family_name', ''),
+            }
+        except Exception:
+            pass
+
+        # Fallback: treat token as access_token and call userinfo endpoint
+        try:
+            resp = http_requests.get(
+                'https://www.googleapis.com/oauth2/v3/userinfo',
+                headers={'Authorization': f'Bearer {token}'},
+                timeout=10,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                return {
+                    'email': data.get('email'),
+                    'first_name': data.get('given_name', ''),
+                    'last_name': data.get('family_name', ''),
+                }
+        except Exception as exc:
+            logger.warning('Google userinfo fallback failed: %s', exc)
+
+        return None
+
+    def _verify_facebook(self, token):
+        try:
+            resp = http_requests.get(
+                'https://graph.facebook.com/me',
+                params={'fields': 'email,first_name,last_name', 'access_token': token},
+                timeout=10,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                if 'error' not in data:
+                    return {
+                        'email': data.get('email'),
+                        'first_name': data.get('first_name', ''),
+                        'last_name': data.get('last_name', ''),
+                    }
+        except Exception as exc:
+            logger.warning('Facebook token verification failed: %s', exc)
+
+        return None

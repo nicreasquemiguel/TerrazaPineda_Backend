@@ -307,6 +307,47 @@ class BookingViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    SHAREABLE_STATUSES = {
+        'aceptacion', 'apartado', 'liquidado',
+        'liquidado_entregado', 'entregado', 'finalizado',
+    }
+
+    @action(detail=True, methods=['get'], url_path='share-card/confirmation')
+    def share_card_confirmation(self, request, pk=None):
+        booking = self.get_object()
+        if booking.status not in self.SHAREABLE_STATUSES:
+            return Response(
+                {'detail': 'La reserva aún no ha sido confirmada.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            from .share_cards import generate_confirmation_card
+            url = generate_confirmation_card(booking)
+            return Response({'url': url})
+        except Exception as exc:
+            import traceback
+            print(f"[share_card_confirmation] Error: {traceback.format_exc()}")
+            return Response({'detail': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['get'], url_path='share-card/review')
+    def share_card_review(self, request, pk=None):
+        booking = self.get_object()
+        review = Review.objects.filter(booking=booking, user=request.user).first()
+        if not review:
+            return Response(
+                {'detail': 'No se encontró una reseña tuya para esta reserva.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        try:
+            from .share_cards import generate_review_card
+            url = generate_review_card(review, booking)
+            return Response({'url': url})
+        except Exception as exc:
+            import traceback
+            print(f"[share_card_review] Error: {traceback.format_exc()}")
+            return Response({'detail': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class VenueViewSet(viewsets.ModelViewSet):
     queryset = Venue.objects.all()
     serializer_class = VenueSerializer
