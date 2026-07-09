@@ -323,6 +323,8 @@ class BookingViewSet(viewsets.ModelViewSet):
         try:
             from .share_cards import generate_confirmation_card
             url = generate_confirmation_card(booking)
+            if not url.startswith('http'):
+                url = request.build_absolute_uri(url)
             return Response({'url': url})
         except Exception as exc:
             import traceback
@@ -341,6 +343,8 @@ class BookingViewSet(viewsets.ModelViewSet):
         try:
             from .share_cards import generate_review_card
             url = generate_review_card(review, booking)
+            if not url.startswith('http'):
+                url = request.build_absolute_uri(url)
             return Response({'url': url})
         except Exception as exc:
             import traceback
