@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal, ROUND_HALF_UP
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -90,30 +91,51 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
 
         # Handle different payment gateways
         if gateway == "stripe":
+            STRIPE_RATE = Decimal("0.036")
+            STRIPE_FIXED = Decimal("3.00")
+
+            booking_amount = Decimal(str(amount)) if amount else Decimal(str(order.calculated_amount_due))
+            commission = (booking_amount * STRIPE_RATE + STRIPE_FIXED).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            charge_amount = booking_amount + commission
+
             success_url = f"{settings.SITE_URL_FRONTEND}/detalle-reserva/{booking.id}?session_id={{CHECKOUT_SESSION_ID}}"
             cancel_url = f"{settings.SITE_URL_FRONTEND}/detalle-reserva/{booking.id}"
             print(f"DEBUG: Stripe success_url={repr(success_url)}")
             session = stripe.checkout.Session.create(
                 payment_method_types=["card"],
                 mode="payment",
-                line_items=[{
-                    "price_data": {
-                        "currency": "mxn",
-                        "product_data": {
-                            "name": f"Reserva en {booking.venue.name}",
-                            "description": f"Paquete: {booking.package.title}",
+                line_items=[
+                    {
+                        "price_data": {
+                            "currency": "mxn",
+                            "product_data": {
+                                "name": f"Reserva en {booking.venue.name}",
+                                "description": f"Paquete: {booking.package.title}",
+                            },
+                            "unit_amount": int(booking_amount * 100),
                         },
-                        "unit_amount": int((float(amount) if amount else float(order.calculated_amount_due)) * 100),
+                        "quantity": 1,
                     },
-                    "quantity": 1,
-                }],
+                    {
+                        "price_data": {
+                            "currency": "mxn",
+                            "product_data": {
+                                "name": "Comisión de procesamiento",
+                                "description": "Stripe 3.6% + $3.00 MXN",
+                            },
+                            "unit_amount": int(commission * 100),
+                        },
+                        "quantity": 1,
+                    },
+                ],
                 metadata={"order_id": str(order.id)},
                 payment_intent_data={
                     "metadata": {
                         "order_id": str(order.id),
                         "booking_id": str(booking.id),
                         "user_id": str(request.user.id),
-                        "gateway": str(gateway)
+                        "gateway": str(gateway),
+                        "booking_amount": str(booking_amount),
                     }
                 },
                 success_url=success_url,
@@ -122,16 +144,44 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
             order.external_session_id = session.id
             order.payment_url = session.url
             order.save()
-            return Response({"payment_url": session.url, "order_id": order.id})
+            return Response({"payment_url": session.url, "order_id": order.id, "commission": str(commission), "charge_amount": str(charge_amount)})
 
         elif gateway == "mercadopago":
+            MP_IVA = Decimal("1.16")
+            MP_FIXED = Decimal("4.00")
+            MP_RATES = {
+                "card_instant": Decimal("0.0349"),
+                "card_14":      Decimal("0.0319"),
+                "card_30":      Decimal("0.0295"),
+                "cash":         Decimal("0.0379"),
+            }
+            mp_release_time = request.data.get("mp_release_time", "instant")  # instant | 14 | 30
+            mp_payment_type = request.data.get("mp_payment_type", "card")     # card | cash
+
+            rate_key = "cash" if mp_payment_type == "cash" else f"card_{mp_release_time}"
+            rate = MP_RATES.get(rate_key, MP_RATES["card_instant"])
+
+            booking_amount = Decimal(str(amount)) if amount else Decimal(str(order.calculated_amount_due))
+            commission = ((booking_amount * rate + MP_FIXED) * MP_IVA).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            charge_amount = booking_amount + commission
+
             preference_data = {
-                "items": [{
-                    "title": f"Reserva en {booking.venue.name} - {booking.package.title}",
-                    "quantity": 1,
-                    "currency_id": "MXN",
-                    "unit_price": float(amount) if amount else float(order.calculated_amount_due),
-                }],
+                "items": [
+                    {
+                        "title": f"Reserva en {booking.venue.name} - {booking.package.title}",
+                        "quantity": 1,
+                        "currency_id": "MXN",
+                        "unit_price": float(booking_amount),
+                    },
+                    {
+                        "title": "Comisión MercadoPago",
+                        "description": f"{float(rate * 100):.2f}% + $4.00 + IVA",
+                        "quantity": 1,
+                        "currency_id": "MXN",
+                        "unit_price": float(commission),
+                    },
+                ],
+                "metadata": {"booking_amount": str(booking_amount)},
                 "external_reference": str(order.id),
                 "back_urls": {
                     "success": f"{settings.SITE_URL_FRONTEND}/detalle-reserva/{booking.id}",
@@ -154,6 +204,8 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
                 "preference_id": preference["id"],
                 "payment_url": preference.get("init_point", ""),
                 "order_id": order.id,
+                "commission": str(commission),
+                "charge_amount": str(charge_amount),
             })
 
         elif gateway == "transfer":

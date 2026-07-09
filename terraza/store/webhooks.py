@@ -41,18 +41,25 @@ def stripe_webhook_view(request):
         order_id = session["metadata"].get("order_id")
         print(event)
         
-        # Get amount_total from the session object
-        amount_total = session.get("amount_total", 0)  # in cents
-        amount_in_pesos = amount_total / 100  # convert from cents to pesos
-        
+        amount_total = session.get("amount_total", 0)  # in cents (includes commission)
+
         payment_intent_id = session.get("payment_intent")
+        booking_amount = None
+        gateway = "stripe"
         if payment_intent_id:
             payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
             booking_id = payment_intent.metadata.get("booking_id")
             user_id = payment_intent.metadata.get("user_id")
-            gateway = payment_intent.metadata.get("gateway")
+            gateway = payment_intent.metadata.get("gateway", "stripe")
+            # booking_amount is what goes toward the booking (excludes commission)
+            raw_booking_amount = payment_intent.metadata.get("booking_amount")
+            if raw_booking_amount:
+                booking_amount = float(raw_booking_amount)
             print(gateway)
             print(order_id)
+
+        # Credit only the booking portion, not the commission
+        amount_in_pesos = booking_amount if booking_amount is not None else amount_total / 100
         
         order = PaymentOrder.objects.get(id=order_id)
         # Guard by transaction_id so duplicate webhook deliveries don't create duplicate payments
@@ -115,7 +122,16 @@ def mercadopago_webhook_view(request):
         order = PaymentOrder.objects.get(id=external_reference)
 
         if not Payment.objects.filter(transaction_id=str(payment_id)).exists():
-            amount = payment_data.get("transaction_amount", order.amount_due)
+            # Prefer booking_amount stored in preference metadata (excludes commission)
+            booking_amount_str = None
+            pref_id = order.external_session_id
+            if pref_id:
+                try:
+                    pref_resp = mercado.preference().get(pref_id)
+                    booking_amount_str = pref_resp.get("response", {}).get("metadata", {}).get("booking_amount")
+                except Exception:
+                    pass
+            amount = float(booking_amount_str) if booking_amount_str else payment_data.get("transaction_amount", order.amount_due)
             Payment.objects.create(
                 order=order,
                 user=order.user,
