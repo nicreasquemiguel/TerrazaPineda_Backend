@@ -298,14 +298,6 @@ def generate_confirmation_card(booking):
     date_str = _format_date_es(booking.start_datetime)
     _centered_text(draw, y, date_str, font_detail, color=TEXT_WHITE)
 
-    y += 58
-    time_str = f"{booking.start_datetime.strftime('%H:%M')} – {booking.end_datetime.strftime('%H:%M')} hrs"
-    _centered_text(draw, y, time_str, font_time, color=TEXT_MUTED)
-
-    if booking.package:
-        y += 46
-        _centered_text(draw, y, booking.package.title, font_pkg, color=ACCENT_CYAN)
-
     # ── Footer ────────────────────────────────────────────────────────────────
     _draw_gradient_bar(draw, SIZE[1] - 80, height=6)
     _centered_text(draw, SIZE[1] - 58, 'terrazapineda.com  •  @terrazapineda', font_foot, color=TEXT_MUTED)
