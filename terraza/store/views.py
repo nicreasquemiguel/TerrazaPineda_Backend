@@ -1,5 +1,5 @@
 import uuid
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, ROUND_UP
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -95,8 +95,10 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
             STRIPE_FIXED = Decimal("3.00")
 
             booking_amount = Decimal(str(amount)) if amount else Decimal(str(order.calculated_amount_due))
-            commission = (booking_amount * STRIPE_RATE + STRIPE_FIXED).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-            charge_amount = booking_amount + commission
+            # Gross-up: solve charge so that net after Stripe fee = booking_amount
+            # charge * (1 - rate) - fixed = booking_amount  →  charge = (booking_amount + fixed) / (1 - rate)
+            charge_amount = ((booking_amount + STRIPE_FIXED) / (1 - STRIPE_RATE)).quantize(Decimal("0.01"), rounding=ROUND_UP)
+            commission = charge_amount - booking_amount
 
             success_url = f"{settings.SITE_URL_FRONTEND}/detalle-reserva/{booking.id}?session_id={{CHECKOUT_SESSION_ID}}"
             cancel_url = f"{settings.SITE_URL_FRONTEND}/detalle-reserva/{booking.id}"
@@ -162,8 +164,11 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
             rate = MP_RATES.get(rate_key, MP_RATES["card_instant"])
 
             booking_amount = Decimal(str(amount)) if amount else Decimal(str(order.calculated_amount_due))
-            commission = ((booking_amount * rate + MP_FIXED) * MP_IVA).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-            charge_amount = booking_amount + commission
+            # Gross-up: charge = (booking_amount + fixed×IVA) / (1 − rate×IVA)
+            effective_rate = rate * MP_IVA
+            effective_fixed = MP_FIXED * MP_IVA
+            charge_amount = ((booking_amount + effective_fixed) / (1 - effective_rate)).quantize(Decimal("0.01"), rounding=ROUND_UP)
+            commission = charge_amount - booking_amount
 
             preference_data = {
                 "items": [
