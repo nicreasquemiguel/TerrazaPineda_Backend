@@ -351,6 +351,39 @@ class BookingViewSet(viewsets.ModelViewSet):
             print(f"[share_card_review] Error: {traceback.format_exc()}")
             return Response({'detail': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=True, methods=['get'], url_path='share-card/confirmation/image')
+    def share_card_confirmation_image(self, request, pk=None):
+        """Serve the confirmation card PNG directly through the API (CORS guaranteed)."""
+        from django.http import FileResponse
+        from django.core.files.storage import default_storage
+        booking = self.get_object()
+        if booking.status not in self.SHAREABLE_STATUSES:
+            return Response({'detail': 'La reserva aún no ha sido confirmada.'}, status=status.HTTP_400_BAD_REQUEST)
+        path = f'share_cards/{booking.id}/confirmation.png'
+        if not default_storage.exists(path):
+            from .share_cards import generate_confirmation_card
+            generate_confirmation_card(booking)
+        if not default_storage.exists(path):
+            return Response({'detail': 'No se pudo generar la tarjeta.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return FileResponse(default_storage.open(path, 'rb'), content_type='image/png', filename='terraza-pineda-reserva.png')
+
+    @action(detail=True, methods=['get'], url_path='share-card/review/image')
+    def share_card_review_image(self, request, pk=None):
+        """Serve the review card PNG directly through the API (CORS guaranteed)."""
+        from django.http import FileResponse
+        from django.core.files.storage import default_storage
+        booking = self.get_object()
+        path = f'share_cards/{booking.id}/review.png'
+        if not default_storage.exists(path):
+            review = Review.objects.filter(booking=booking, user=request.user).first()
+            if not review:
+                return Response({'detail': 'No se encontró una reseña tuya.'}, status=status.HTTP_404_NOT_FOUND)
+            from .share_cards import generate_review_card
+            generate_review_card(review, booking)
+        if not default_storage.exists(path):
+            return Response({'detail': 'No se pudo generar la tarjeta.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return FileResponse(default_storage.open(path, 'rb'), content_type='image/png', filename='terraza-pineda-resena.png')
+
 
 class VenueViewSet(viewsets.ModelViewSet):
     queryset = Venue.objects.all()
