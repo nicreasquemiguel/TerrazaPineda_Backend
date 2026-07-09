@@ -95,52 +95,21 @@ QUOTES_REVIEW = [
 
 # ── Logo ─────────────────────────────────────────────────────────────────────
 
-_LOGO_SVG = os.path.join(os.path.dirname(__file__), 'logo_white.svg')
+_LOGO_PNG = os.path.join(os.path.dirname(__file__), 'logo_white.png')
 _logo_cache = None
 
 
 def _get_logo(target_h=130):
-    """Return logo as RGBA PIL Image, scaled to target_h pixels tall. Cached."""
+    """Return logo as RGBA PIL Image scaled to target_h pixels tall. Cached."""
     global _logo_cache
-    if _logo_cache is not None:
-        ratio = target_h / _logo_cache.height
-        w = int(_logo_cache.width * ratio)
-        return _logo_cache.resize((w, target_h), Image.LANCZOS)
-
-    # Try cairosvg (best quality)
-    try:
-        import cairosvg
-        # SVG aspect ratio: 1066 wide × 1196 tall
-        target_w = int(target_h * 1066 / 1196)
-        png_bytes = cairosvg.svg2png(
-            url=_LOGO_SVG,
-            output_width=target_w * 4,   # render 4× for crispness then resize
-            output_height=target_h * 4,
-        )
-        big = Image.open(io.BytesIO(png_bytes)).convert('RGBA')
-        _logo_cache = big.resize((target_w, target_h), Image.LANCZOS)
-        return _logo_cache
-    except Exception:
-        pass
-
-    # Fallback: try svglib
-    try:
-        from svglib.svglib import svg2rlg
-        from reportlab.graphics import renderPM
-        drawing = svg2rlg(_LOGO_SVG)
-        if drawing:
-            buf = io.BytesIO()
-            renderPM.drawToFile(drawing, buf, fmt='PNG')
-            buf.seek(0)
-            img = Image.open(buf).convert('RGBA')
-            ratio = target_h / img.height
-            w = int(img.width * ratio)
-            _logo_cache = img.resize((w, target_h), Image.LANCZOS)
-            return _logo_cache
-    except Exception:
-        pass
-
-    return None  # will fall back to text
+    if _logo_cache is None:
+        if os.path.exists(_LOGO_PNG):
+            _logo_cache = Image.open(_LOGO_PNG).convert('RGBA')
+        else:
+            return None
+    ratio = target_h / _logo_cache.height
+    w = int(_logo_cache.width * ratio)
+    return _logo_cache.resize((w, target_h), Image.LANCZOS)
 
 
 # ── Canvas helpers ────────────────────────────────────────────────────────────
@@ -284,24 +253,27 @@ def generate_confirmation_card(booking):
     # ── Top bar ───────────────────────────────────────────────────────────────
     _draw_gradient_bar(draw, 0, height=8)
 
-    # ── Logo or fallback text ─────────────────────────────────────────────────
-    LOGO_H = 130
-    logo = _get_logo(LOGO_H)
-    y = 60
+    # ── "TERRAZA PINEDA" brand text ───────────────────────────────────────────
+    font_brand = _get_font(44, bold=True)
+    y = 52
+    _centered_text(draw, y, 'TERRAZA PINEDA', font_brand, color=TEXT_WHITE)
+    y += 62
 
+    # ── Thin divider ─────────────────────────────────────────────────────────
+    _draw_gradient_bar(draw, y, height=2)
+    y += 30
+
+    # ── Logo image (TP symbol) ────────────────────────────────────────────────
+    LOGO_H = 140
+    logo = _get_logo(LOGO_H)
     if logo:
         lx = (SIZE[0] - logo.width) // 2
-        # Paste with alpha channel as mask
         img.paste(logo, (lx, y), logo)
         y += LOGO_H + 30
-    else:
-        font_brand = _get_font(52, bold=True)
-        _centered_text(draw, y, 'TERRAZA PINEDA', font_brand, color=TEXT_WHITE)
-        y += 75
 
     draw = ImageDraw.Draw(img)  # re-get draw after paste
 
-    # ── Divider ───────────────────────────────────────────────────────────────
+    # ── Divider before quote ──────────────────────────────────────────────────
     _draw_gradient_bar(draw, y, height=2)
     y += 50
 

@@ -66,4 +66,3 @@ typing_extensions==4.11.0
 uritemplate==4.1.1
 urllib3==1.26.18
 whitenoise==6.7.0
-cairosvg>=2.7.0
