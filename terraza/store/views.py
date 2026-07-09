@@ -188,6 +188,57 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
         
         return Response({"error": f"Unsupported gateway: {gateway}"}, status=400)
 
+    @action(detail=False, methods=["post"], url_path='register_cash_payment')
+    def register_cash_payment(self, request):
+        """Staff-only: register a cash payment directly for a booking."""
+        if not request.user.is_staff:
+            return Response({'detail': 'No autorizado.'}, status=status.HTTP_403_FORBIDDEN)
+
+        booking_id = request.data.get('booking_id')
+        raw_amount = request.data.get('amount')
+
+        if not booking_id or raw_amount is None:
+            return Response({'detail': 'booking_id y amount son requeridos.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            amount = float(raw_amount)
+            if amount <= 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            return Response({'detail': 'El monto debe ser mayor a 0.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            booking = Booking.objects.get(id=booking_id)
+        except Booking.DoesNotExist:
+            return Response({'detail': 'Reserva no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+
+        order, _ = PaymentOrder.objects.get_or_create(
+            booking=booking,
+            user=booking.user,
+            gateway='cash',
+            defaults={'amount_due': booking.total_price, 'status': 'pending'}
+        )
+
+        payment = Payment.objects.create(
+            order=order,
+            user=request.user,
+            method='cash',
+            amount=amount,
+            status='paid',
+            transaction_id=f'CASH-{uuid.uuid4().hex[:8].upper()}',
+            paid_at=now()
+        )
+
+        order.save()  # recalculates amount_due and updates status
+
+        return Response({
+            'message': 'Pago en efectivo registrado exitosamente.',
+            'payment_id': str(payment.id),
+            'order_id': str(order.id),
+            'amount': amount,
+            'order_status': order.status
+        })
+
     @action(detail=True, methods=["post"])
     def cancel(self, request, pk=None):
         order = self.get_object()
