@@ -91,13 +91,15 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
 
         # Handle different payment gateways
         if gateway == "stripe":
-            STRIPE_RATE = Decimal("0.036")
+            # Observed actual rate from Stripe dashboard: 4.1% + $3.00 (before IVA 16%)
+            # Stripe also charges IVA on its fee, so total deduction = (charge * rate + fixed) * 1.16
+            # Gross-up: charge = (booking_amount + fixed * IVA) / (1 - rate * IVA)
+            STRIPE_RATE = Decimal("0.041")
             STRIPE_FIXED = Decimal("3.00")
+            STRIPE_IVA = Decimal("1.16")
 
             booking_amount = Decimal(str(amount)) if amount else Decimal(str(order.calculated_amount_due))
-            # Gross-up: solve charge so that net after Stripe fee = booking_amount
-            # charge * (1 - rate) - fixed = booking_amount  →  charge = (booking_amount + fixed) / (1 - rate)
-            charge_amount = ((booking_amount + STRIPE_FIXED) / (1 - STRIPE_RATE)).quantize(Decimal("0.01"), rounding=ROUND_UP)
+            charge_amount = ((booking_amount + STRIPE_FIXED * STRIPE_IVA) / (1 - STRIPE_RATE * STRIPE_IVA)).quantize(Decimal("0.01"), rounding=ROUND_UP)
             commission = charge_amount - booking_amount
 
             success_url = f"{settings.SITE_URL_FRONTEND}/detalle-reserva/{booking.id}?session_id={{CHECKOUT_SESSION_ID}}"
