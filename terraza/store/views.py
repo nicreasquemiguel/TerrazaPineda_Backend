@@ -206,8 +206,7 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
             if preference_response["status"] not in (200, 201):
                 return Response({"error": "MercadoPago preference creation failed", "detail": preference}, status=502)
             order.external_session_id = preference["id"]
-            # Use sandbox_init_point when access token is a test token
-            is_test = settings.MERCADO_PAGO_ACCESS_TOKEN.startswith("TEST-")
+            is_test = getattr(settings, "MERCADO_PAGO_TEST_MODE", False) or settings.MERCADO_PAGO_ACCESS_TOKEN.startswith("TEST-")
             checkout_url = preference.get("sandbox_init_point" if is_test else "init_point", "")
             order.payment_url = checkout_url
             order.save()
