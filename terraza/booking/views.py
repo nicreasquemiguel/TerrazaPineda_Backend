@@ -357,8 +357,12 @@ class BookingViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'No autorizado.'}, status=status.HTTP_403_FORBIDDEN)
         booking = self.get_object()
         booking.is_entregado = not booking.is_entregado
-        booking.save(update_fields=['is_entregado'])
-        return Response({'is_entregado': booking.is_entregado, 'status': booking.status})
+        if booking.is_entregado:
+            booking.entregado_after_status = booking.status
+        else:
+            booking.entregado_after_status = None
+        booking.save(update_fields=['is_entregado', 'entregado_after_status'])
+        return Response({'is_entregado': booking.is_entregado, 'status': booking.status, 'entregado_after_status': booking.entregado_after_status})
 
     @action(detail=True, methods=['post'], url_path='finalizar')
     def finalizar(self, request, pk=None):

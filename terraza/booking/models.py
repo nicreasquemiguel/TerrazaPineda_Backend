@@ -133,6 +133,7 @@ class Booking(models.Model):
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='solicitud')
     is_entregado = models.BooleanField(default=False)
+    entregado_after_status = models.CharField(max_length=20, null=True, blank=True)
     hora_entrega = models.TimeField(null=True, blank=True)
     visible_to_users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="visible_bookings", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

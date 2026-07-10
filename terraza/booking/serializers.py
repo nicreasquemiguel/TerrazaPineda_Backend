@@ -64,6 +64,7 @@ class BookingSerializer(serializers.ModelSerializer):
             'line_items',
             'date_changes_count',
             'is_entregado',
+            'entregado_after_status',
             'hora_entrega',
         ]
 
