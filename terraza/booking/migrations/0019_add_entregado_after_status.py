@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('booking', '0018_add_venueconfiguration_remove_package_hours'),
+        ('booking', '0018b_is_entregado_hora_entrega_state'),
     ]
 
     operations = [
