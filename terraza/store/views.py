@@ -198,21 +198,13 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
                 "auto_return": "approved",
                 "notification_url": f"{settings.SITE_URL}/api/store/webhooks/mercadopago/",
             }
-            print(f"[MercadoPago] back_urls={preference_data['back_urls']}", flush=True)
             preference_response = mercado.preference().create(preference_data)
-            print(f"[MercadoPago] status={preference_response['status']} response={preference_response['response']}", flush=True)
             preference = preference_response["response"]
             if preference_response["status"] not in (200, 201):
                 return Response({"error": "MercadoPago preference creation failed", "detail": preference}, status=502)
             order.external_session_id = preference["id"]
             is_test = getattr(settings, "MERCADO_PAGO_TEST_MODE", False) or settings.MERCADO_PAGO_ACCESS_TOKEN.startswith("TEST-")
-            print(f"[MP DEBUG] MERCADO_PAGO_TEST_MODE setting={getattr(settings, 'MERCADO_PAGO_TEST_MODE', 'NOT_FOUND')}", flush=True)
-            print(f"[MP DEBUG] ACCESS_TOKEN prefix={settings.MERCADO_PAGO_ACCESS_TOKEN[:15]}...", flush=True)
-            print(f"[MP DEBUG] is_test={is_test}", flush=True)
-            print(f"[MP DEBUG] init_point={preference.get('init_point', 'MISSING')}", flush=True)
-            print(f"[MP DEBUG] sandbox_init_point={preference.get('sandbox_init_point', 'MISSING')}", flush=True)
             checkout_url = preference.get("sandbox_init_point" if is_test else "init_point", "")
-            print(f"[MP DEBUG] using checkout_url={checkout_url}", flush=True)
             order.payment_url = checkout_url
             order.save()
             return Response({
