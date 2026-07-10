@@ -351,6 +351,26 @@ class BookingViewSet(viewsets.ModelViewSet):
             print(f"[share_card_review] Error: {traceback.format_exc()}")
             return Response({'detail': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=True, methods=['post'], url_path='marcar_entregado')
+    def marcar_entregado(self, request, pk=None):
+        if not request.user.is_staff:
+            return Response({'detail': 'No autorizado.'}, status=status.HTTP_403_FORBIDDEN)
+        booking = self.get_object()
+        booking.is_entregado = not booking.is_entregado
+        booking.save(update_fields=['is_entregado'])
+        return Response({'is_entregado': booking.is_entregado, 'status': booking.status})
+
+    @action(detail=True, methods=['post'], url_path='finalizar')
+    def finalizar(self, request, pk=None):
+        if not request.user.is_staff:
+            return Response({'detail': 'No autorizado.'}, status=status.HTTP_403_FORBIDDEN)
+        booking = self.get_object()
+        if booking.status in ['cancelado', 'rechazado']:
+            return Response({'detail': 'No se puede finalizar una reserva cancelada o rechazada.'}, status=status.HTTP_400_BAD_REQUEST)
+        booking.status = 'finalizado'
+        booking.save(update_fields=['status'])
+        return Response({'status': booking.status, 'is_entregado': booking.is_entregado})
+
     @action(detail=True, methods=['get'], url_path='share-card/confirmation/image')
     def share_card_confirmation_image(self, request, pk=None):
         """Serve the confirmation card PNG directly through the API (CORS guaranteed)."""
