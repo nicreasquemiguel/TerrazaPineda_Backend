@@ -371,9 +371,16 @@ class BookingViewSet(viewsets.ModelViewSet):
         booking = self.get_object()
         if booking.status in ['cancelado', 'rechazado']:
             return Response({'detail': 'No se puede finalizar una reserva cancelada o rechazada.'}, status=status.HTTP_400_BAD_REQUEST)
+        previous_status = booking.status
         booking.status = 'finalizado'
-        booking.save(update_fields=['status'])
-        return Response({'status': booking.status, 'is_entregado': booking.is_entregado})
+        if not booking.is_entregado:
+            booking.is_entregado = True
+            if not booking.entregado_after_status:
+                booking.entregado_after_status = previous_status
+            booking.save(update_fields=['status', 'is_entregado', 'entregado_after_status'])
+        else:
+            booking.save(update_fields=['status'])
+        return Response({'status': booking.status, 'is_entregado': booking.is_entregado, 'entregado_after_status': booking.entregado_after_status})
 
     @action(detail=True, methods=['get'], url_path='share-card/confirmation/image')
     def share_card_confirmation_image(self, request, pk=None):
