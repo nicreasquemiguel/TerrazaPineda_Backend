@@ -90,6 +90,9 @@ def stripe_webhook_view(request):
 
 
 @csrf_exempt
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
 def mercadopago_webhook_view(request):
     import mercadopago
     mercado = mercadopago.SDK(settings.MERCADO_PAGO_ACCESS_TOKEN)

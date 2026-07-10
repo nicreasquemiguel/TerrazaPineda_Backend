@@ -80,6 +80,16 @@ CORS_ALLOW_METHODS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://terrazapineda.com",
+    "https://www.terrazapineda.com",
+    "https://api.terrazapineda.com",
+    "https://api.mercadopago.com",
+    "https://www.mercadopago.com",
+    "https://www.mercadopago.com.mx",
+    "https://hooks.stripe.com",
+]
+
 # cookies pueden viajar por HTTP
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
