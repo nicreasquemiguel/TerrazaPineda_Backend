@@ -196,7 +196,6 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
                     "pending": f"{settings.SITE_URL_FRONTEND}/detalle-reserva/{booking.id}",
                 },
                 "auto_return": "approved",
-                "binary_mode": True,
                 "notification_url": f"{settings.SITE_URL}/api/store/webhooks/mercadopago/",
             }
             print(f"[MercadoPago] back_urls={preference_data['back_urls']}")
