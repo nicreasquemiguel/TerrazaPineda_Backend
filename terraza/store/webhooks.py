@@ -1,4 +1,4 @@
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny
 import stripe
 from django.views.decorators.csrf import csrf_exempt
@@ -15,6 +15,7 @@ stripe.api_key = STRIPE_SECRET_KEY
 
 @csrf_exempt
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def stripe_webhook_view(request):
     payload = request.body
