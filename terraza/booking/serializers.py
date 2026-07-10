@@ -64,6 +64,7 @@ class BookingSerializer(serializers.ModelSerializer):
             'line_items',
             'date_changes_count',
             'is_entregado',
+            'hora_entrega',
         ]
 
     def get_rejection_reason(self, obj):
@@ -325,6 +326,7 @@ class BookingUpdateSerializer(serializers.ModelSerializer):
             'end_datetime',
             'status',
             'cancellation_reason',
+            'hora_entrega',
         ]
 
     def update(self, instance, validated_data):
