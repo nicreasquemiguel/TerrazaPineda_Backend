@@ -15,14 +15,4 @@ class Migration(migrations.Migration):
             name='entregado_after_status',
             field=models.CharField(blank=True, max_length=20, null=True),
         ),
-        migrations.AddField(
-            model_name='booking',
-            name='hora_entrega',
-            field=models.TimeField(blank=True, null=True),
-        ),
-        migrations.AddField(
-            model_name='booking',
-            name='is_entregado',
-            field=models.BooleanField(default=False),
-        ),
     ]
