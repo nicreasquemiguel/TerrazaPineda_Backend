@@ -291,6 +291,9 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
 
         order.save()  # recalculates amount_due and updates status
 
+        # Build staff display name for log descriptions
+        staff_name = request.user.get_full_name() or request.user.email
+
         # Log the cash payment registration
         log_payment_activity(
             user=request.user,
@@ -302,10 +305,11 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
             gateway='cash',
             old_status='',
             new_status='paid',
-            description=f'Staff {request.user.email} registró pago en efectivo de ${amount:,.2f} para reserva {booking_id}',
+            description=f'{staff_name} recibió ${amount:,.2f} en efectivo',
             metadata={
                 'booking_id': str(booking_id),
                 'staff_email': request.user.email,
+                'staff_name': staff_name,
                 'transaction_id': payment.transaction_id,
             }
         )
@@ -315,11 +319,12 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
             action='payment_received',
             old_status=booking.status,
             new_status=booking.status,
-            description=f'Pago en efectivo de ${amount:,.2f} registrado por {request.user.email}',
+            description=f'{staff_name} recibió ${amount:,.2f} en efectivo',
             metadata={
                 'payment_id': str(payment.id),
                 'amount': amount,
                 'method': 'cash',
+                'staff_name': staff_name,
                 'staff_email': request.user.email,
             }
         )

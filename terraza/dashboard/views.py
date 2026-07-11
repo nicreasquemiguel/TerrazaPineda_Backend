@@ -289,6 +289,8 @@ class DashboardViewSet(viewsets.ViewSet):
         
         booking = payment.order.booking
 
+        staff_name = request.user.get_full_name() or request.user.email
+
         if action == 'approve':
             payment.status = 'paid'
             payment.paid_at = timezone.now()
@@ -310,8 +312,8 @@ class DashboardViewSet(viewsets.ViewSet):
                 gateway=payment.gateway or '',
                 old_status='pending',
                 new_status='paid',
-                description=f'Pago aprobado por {request.user.email}: ${payment.amount:,.2f} (método: {payment.method})',
-                metadata={'booking_id': str(booking.id), 'staff_email': request.user.email}
+                description=f'{staff_name} aprobó pago de ${payment.amount:,.2f}',
+                metadata={'booking_id': str(booking.id), 'staff_email': request.user.email, 'staff_name': staff_name}
             )
             log_booking_activity(
                 user=request.user,
@@ -319,8 +321,8 @@ class DashboardViewSet(viewsets.ViewSet):
                 action='payment_received',
                 old_status=booking.status,
                 new_status=booking.status,
-                description=f'Pago de ${payment.amount:,.2f} aprobado por {request.user.email}',
-                metadata={'payment_id': str(payment.id), 'amount': float(payment.amount), 'method': payment.method}
+                description=f'{staff_name} aprobó pago de ${payment.amount:,.2f}',
+                metadata={'payment_id': str(payment.id), 'amount': float(payment.amount), 'method': payment.method, 'staff_name': staff_name}
             )
 
             return Response({'message': 'Payment approved successfully'})
@@ -345,8 +347,8 @@ class DashboardViewSet(viewsets.ViewSet):
                 gateway=payment.gateway or '',
                 old_status='pending',
                 new_status='failed',
-                description=f'Pago rechazado por {request.user.email}: ${payment.amount:,.2f}. Motivo: {reason}',
-                metadata={'booking_id': str(booking.id), 'staff_email': request.user.email, 'reason': reason}
+                description=f'{staff_name} rechazó pago de ${payment.amount:,.2f}. Motivo: {reason}',
+                metadata={'booking_id': str(booking.id), 'staff_email': request.user.email, 'staff_name': staff_name, 'reason': reason}
             )
 
             return Response({'message': 'Payment rejected successfully'})
@@ -380,6 +382,9 @@ class DashboardViewSet(viewsets.ViewSet):
         
         booking = payment.order.booking
 
+        staff_name = request.user.get_full_name() or request.user.email
+        method_label = 'transferencia' if payment.method == 'transfer' else 'efectivo'
+
         if action == 'approve':
             payment.status = 'paid'
             payment.paid_at = timezone.now()
@@ -401,8 +406,8 @@ class DashboardViewSet(viewsets.ViewSet):
                 gateway=payment.method,
                 old_status='pending',
                 new_status='paid',
-                description=f'Comprobante de {payment.method} aprobado por {request.user.email}: ${payment.amount:,.2f}',
-                metadata={'booking_id': str(booking.id), 'staff_email': request.user.email}
+                description=f'{staff_name} aprobó comprobante de {method_label}: ${payment.amount:,.2f}',
+                metadata={'booking_id': str(booking.id), 'staff_email': request.user.email, 'staff_name': staff_name}
             )
             log_booking_activity(
                 user=request.user,
@@ -410,8 +415,8 @@ class DashboardViewSet(viewsets.ViewSet):
                 action='payment_received',
                 old_status=booking.status,
                 new_status=booking.status,
-                description=f'Pago por {payment.method} de ${payment.amount:,.2f} aprobado por {request.user.email}',
-                metadata={'payment_id': str(payment.id), 'amount': float(payment.amount), 'method': payment.method}
+                description=f'{staff_name} aprobó comprobante de {method_label}: ${payment.amount:,.2f}',
+                metadata={'payment_id': str(payment.id), 'amount': float(payment.amount), 'method': payment.method, 'staff_name': staff_name}
             )
 
             return Response({
@@ -442,8 +447,8 @@ class DashboardViewSet(viewsets.ViewSet):
                 gateway=payment.method,
                 old_status='pending',
                 new_status='failed',
-                description=f'Comprobante de {payment.method} rechazado por {request.user.email}: ${payment.amount:,.2f}. Motivo: {reason}',
-                metadata={'booking_id': str(booking.id), 'staff_email': request.user.email, 'reason': reason}
+                description=f'{staff_name} rechazó comprobante de {method_label}: ${payment.amount:,.2f}. Motivo: {reason}',
+                metadata={'booking_id': str(booking.id), 'staff_email': request.user.email, 'staff_name': staff_name, 'reason': reason}
             )
             
             return Response({
