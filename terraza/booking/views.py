@@ -382,6 +382,50 @@ class BookingViewSet(viewsets.ModelViewSet):
             booking.save(update_fields=['status'])
         return Response({'status': booking.status, 'is_entregado': booking.is_entregado, 'entregado_after_status': booking.entregado_after_status})
 
+    @action(detail=True, methods=['post'], url_path='add_custom_charge')
+    def add_custom_charge(self, request, pk=None):
+        if not request.user.is_staff:
+            return Response({'detail': 'No autorizado.'}, status=status.HTTP_403_FORBIDDEN)
+        booking = self.get_object()
+        description = request.data.get('description', '').strip()
+        try:
+            price = float(request.data.get('price', 0))
+        except (TypeError, ValueError):
+            price = 0
+        if not description:
+            return Response({'detail': 'La descripción es requerida.'}, status=status.HTTP_400_BAD_REQUEST)
+        if price <= 0:
+            return Response({'detail': 'El precio debe ser mayor a 0.'}, status=status.HTTP_400_BAD_REQUEST)
+        from .models import BookingLineItem
+        from decimal import Decimal
+        BookingLineItem.objects.create(
+            booking=booking,
+            item_type='other',
+            description=description,
+            unit_price=Decimal(str(price)),
+            quantity=1,
+        )
+        booking.total_price = booking.calculate_total()
+        booking.save(update_fields=['total_price'])
+        from .serializers import BookingSerializer
+        return Response(BookingSerializer(booking, context={'request': request}).data)
+
+    @action(detail=True, methods=['delete'], url_path=r'remove_custom_charge/(?P<line_item_id>\d+)')
+    def remove_custom_charge(self, request, pk=None, line_item_id=None):
+        if not request.user.is_staff:
+            return Response({'detail': 'No autorizado.'}, status=status.HTTP_403_FORBIDDEN)
+        booking = self.get_object()
+        from .models import BookingLineItem
+        try:
+            item = BookingLineItem.objects.get(id=line_item_id, booking=booking, item_type='other')
+        except BookingLineItem.DoesNotExist:
+            return Response({'detail': 'Cargo no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        item.delete()
+        booking.total_price = booking.calculate_total()
+        booking.save(update_fields=['total_price'])
+        from .serializers import BookingSerializer
+        return Response(BookingSerializer(booking, context={'request': request}).data)
+
     @action(detail=True, methods=['post'], url_path='quitar_finalizado')
     def quitar_finalizado(self, request, pk=None):
         if not request.user.is_staff:
