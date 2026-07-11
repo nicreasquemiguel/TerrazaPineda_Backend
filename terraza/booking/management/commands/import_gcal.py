@@ -19,7 +19,7 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone as tz
 
-from booking.models import Booking, Package, Venue, VenueConfiguration
+from booking.models import Booking, Package, Venue
 
 MEXICO_TZ = ZoneInfo("America/Mexico_City")
 
@@ -58,13 +58,12 @@ def _parse_dt(prop_name, value, config):
     return tz.make_aware(dt, zone)
 
 
-def parse_ics(path):
+def parse_ics(path, open_time, close_time):
     """Parse .ics file; return list of {summary, start, end, raw_start_is_date}."""
     with open(path, "r", encoding="utf-8") as f:
         text = f.read()
 
     text = _unfold(text)
-    config = VenueConfiguration.get_config()
     events = []
     current = None
 
@@ -125,10 +124,10 @@ def parse_ics(path):
             end_date = start_date
 
         start = tz.make_aware(
-            datetime.datetime.combine(start_date, config.open_time), MEXICO_TZ
+            datetime.datetime.combine(start_date, open_time), MEXICO_TZ
         )
         end = tz.make_aware(
-            datetime.datetime.combine(end_date, config.close_time), MEXICO_TZ
+            datetime.datetime.combine(end_date, close_time), MEXICO_TZ
         )
 
         # close_time midnight (00:00) means it rolls to next day
@@ -164,12 +163,26 @@ class Command(BaseCommand):
             "--past", action="store_true",
             help="Also import events whose end date is in the past",
         )
+        parser.add_argument(
+            "--open-time", default="10:00",
+            help="Venue open time HH:MM (default: 10:00)",
+        )
+        parser.add_argument(
+            "--close-time", default="22:00",
+            help="Venue close time HH:MM (default: 22:00)",
+        )
 
     def handle(self, *args, **options):
-        ics_path   = options["ics_file"]
-        dry_run    = options["dry_run"]
-        status     = options["status"]
+        ics_path     = options["ics_file"]
+        dry_run      = options["dry_run"]
+        status       = options["status"]
         include_past = options["past"]
+
+        try:
+            open_time  = datetime.time(*[int(x) for x in options["open_time"].split(":")])
+            close_time = datetime.time(*[int(x) for x in options["close_time"].split(":")])
+        except Exception:
+            raise CommandError("Invalid time format. Use HH:MM, e.g. --open-time 10:00")
 
         # ── resolve required DB objects ───────────────────────────────────────
         User = get_user_model()
@@ -187,7 +200,7 @@ class Command(BaseCommand):
 
         # ── parse ─────────────────────────────────────────────────────────────
         try:
-            events = parse_ics(ics_path)
+            events = parse_ics(ics_path, open_time, close_time)
         except FileNotFoundError:
             raise CommandError(f"File not found: {ics_path}")
         except Exception as e:

@@ -66,7 +66,8 @@ def log_booking_activity(
     old_status='',
     new_status='',
     description='',
-    metadata=None
+    metadata=None,
+    request=None,
 ):
     """Log a booking-related activity"""
     try:
