@@ -407,9 +407,52 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if self.request.user.is_staff:
+            return self.queryset.all()
         return self.queryset.filter(user=self.request.user)
-    
-    
+
+    @action(detail=True, methods=["post"], url_path="approve")
+    def approve_payment(self, request, pk=None):
+        if not request.user.is_staff:
+            return Response({"detail": "No autorizado."}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            payment = Payment.objects.get(pk=pk)
+        except Payment.DoesNotExist:
+            return Response({"detail": "Pago no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+        if payment.status == "paid":
+            return Response({"detail": "El pago ya está confirmado."}, status=status.HTTP_400_BAD_REQUEST)
+
+        payment.status = "paid"
+        payment.paid_at = now()
+        payment.save()
+        payment.order.save()  # triggers recalculation
+
+        staff_name = request.user.get_full_name() or request.user.email
+        log_payment_activity(
+            user=request.user,
+            payment_id=payment.id,
+            order_id=payment.order.id,
+            action="admin_approved",
+            amount=float(payment.amount),
+            method=payment.method,
+            gateway=payment.gateway,
+            old_status="pending",
+            new_status="paid",
+            description=f"{staff_name} aprobó pago de ${float(payment.amount):,.2f}",
+            metadata={"staff_email": request.user.email},
+        )
+        log_booking_activity(
+            user=request.user,
+            booking_id=payment.order.booking.id,
+            action="payment_received",
+            old_status=payment.order.booking.status,
+            new_status=payment.order.booking.status,
+            description=f"{staff_name} aprobó pago de ${float(payment.amount):,.2f} ({payment.get_method_display() if hasattr(payment, 'get_method_display') else payment.method})",
+            metadata={"payment_id": str(payment.id)},
+        )
+        return Response({"message": "Pago aprobado.", "payment": PaymentSerializer(payment).data})
+
+
 
 class RefundRequestViewSet(viewsets.ModelViewSet):
     queryset = RefundRequest.objects.all()
