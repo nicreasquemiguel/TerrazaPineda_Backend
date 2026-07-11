@@ -31,7 +31,7 @@ def _unfold(text):
     return re.sub(r"\r?\n[ \t]", "", text)
 
 
-def _parse_dt(prop_name, value, config):
+def _parse_dt(prop_name, value):
     """
     Return an aware datetime from an ICS DTSTART/DTEND line.
     prop_name  e.g. "DTSTART;TZID=America/Mexico_City" or "DTSTART;VALUE=DATE"
@@ -85,12 +85,12 @@ def parse_ics(path, open_time, close_time):
         prop_upper = prop.upper()
 
         if prop_upper.startswith("DTSTART"):
-            parsed = _parse_dt(prop_upper, value, config)
+            parsed = _parse_dt(prop_upper, value)
             current["_start_raw"] = parsed
             current["_start_is_date"] = isinstance(parsed, datetime.date) and not isinstance(parsed, datetime.datetime)
 
         elif prop_upper.startswith("DTEND"):
-            parsed = _parse_dt(prop_upper, value, config)
+            parsed = _parse_dt(prop_upper, value)
             current["_end_raw"] = parsed
             current["_end_is_date"] = isinstance(parsed, datetime.date) and not isinstance(parsed, datetime.datetime)
 
