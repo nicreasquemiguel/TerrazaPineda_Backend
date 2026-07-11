@@ -222,30 +222,58 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
             if not amount or float(amount) <= 0:
                 return Response({"error": "amount is required and must be greater than 0 for transfer payments"}, status=400)
 
+            is_staff = request.user.is_staff
             payment_data = {
                 "order": order,
                 "user": order.user,
                 "amount": amount,
                 "method": "transfer",
-                "status": "pending",  # Transfer payments start as pending
+                "status": "paid" if is_staff else "pending",
                 "gateway": gateway,
                 "transaction_id": uuid.uuid4(),
-                "paid_at": None  # No paid_at for pending payments
+                "paid_at": now() if is_staff else None,
             }
-            
-            # Add payment photo if provided
+
             if "payment_photo_base64" in request.data:
                 payment_data["payment_photo_base64"] = request.data["payment_photo_base64"]
-                print(f"DEBUG: Added payment photo to payment data")
-            
-            print(f"DEBUG: Creating payment with data: {payment_data}")
+
             payment = Payment.objects.create(**payment_data)
             order.save()
-            print(f"DEBUG: Payment created successfully: {payment.id}")
+
+            if is_staff:
+                staff_name = request.user.get_full_name() or request.user.email
+                log_payment_activity(
+                    user=request.user,
+                    payment_id=payment.id,
+                    order_id=order.id,
+                    action='admin_approved',
+                    amount=float(amount),
+                    method='transfer',
+                    gateway='transfer',
+                    old_status='pending',
+                    new_status='paid',
+                    description=f'{staff_name} registró transferencia de ${float(amount):,.2f} (auto-confirmada)',
+                    metadata={'booking_id': str(booking_id), 'staff_email': request.user.email},
+                )
+                log_booking_activity(
+                    user=request.user,
+                    booking_id=order.booking.id,
+                    action='payment_received',
+                    old_status=order.booking.status,
+                    new_status=order.booking.status,
+                    description=f'{staff_name} registró transferencia de ${float(amount):,.2f}',
+                    metadata={'payment_id': str(payment.id)},
+                )
+                return Response({
+                    "message": "Transferencia confirmada y registrada como pagada.",
+                    "payment_id": payment.id,
+                    "order_id": order.id,
+                })
+
             return Response({
                 "message": "Se mando correctamente el pago a revision",
                 "payment_id": payment.id,
-                "order_id": order.id
+                "order_id": order.id,
             })
         
         return Response({"error": f"Unsupported gateway: {gateway}"}, status=400)
