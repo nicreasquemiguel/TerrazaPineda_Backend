@@ -2,11 +2,18 @@ from django.shortcuts import render
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter, SearchFilter
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.utils import timezone
 from datetime import timedelta
+
+
+class LogPagination(PageNumberPagination):
+    page_size = 50
+    page_size_query_param = 'page_size'
+    max_page_size = 200
 
 from .models import (
     ActivityLog, BookingLog, PaymentLog, UserActivityLog, 
@@ -27,41 +34,32 @@ class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = ActivityLog.objects.all()
     serializer_class = ActivityLogSerializer
     permission_classes = [IsAdminUser]
+    pagination_class = LogPagination
     filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
     filterset_fields = ['category', 'action', 'log_level', 'user']
     ordering_fields = ['timestamp', 'category', 'action']
     ordering = ['-timestamp']
     search_fields = ['description', 'action', 'user__email']
-    
+
     @action(detail=False, methods=['get'])
     def summary(self, request):
         """Get summary statistics for activity logs"""
-        # Get date range from query params
         days = int(request.query_params.get('days', 30))
         start_date = timezone.now() - timedelta(days=days)
-        
-        # Filter logs by date range
         recent_logs = self.queryset.filter(timestamp__gte=start_date)
-        
-        # Calculate statistics
+
         total_activities = recent_logs.count()
-        by_category = {}
-        by_level = {}
-        by_action = {}
-        
-        for log in recent_logs:
-            # Count by category
-            category = log.category
-            by_category[category] = by_category.get(category, 0) + 1
-            
-            # Count by log level
-            level = log.log_level
-            by_level[level] = by_level.get(level, 0) + 1
-            
-            # Count by action
-            action = log.action
-            by_action[action] = by_action.get(action, 0) + 1
-        
+        by_category = dict(
+            recent_logs.values('category').annotate(count=Count('id')).values_list('category', 'count')
+        )
+        by_level = dict(
+            recent_logs.values('log_level').annotate(count=Count('id')).values_list('log_level', 'count')
+        )
+        top_actions = dict(
+            recent_logs.values('action').annotate(count=Count('id'))
+            .order_by('-count').values_list('action', 'count')[:10]
+        )
+
         return Response({
             'period_days': days,
             'start_date': start_date.date(),
@@ -69,7 +67,7 @@ class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
             'total_activities': total_activities,
             'by_category': by_category,
             'by_level': by_level,
-            'top_actions': dict(sorted(by_action.items(), key=lambda x: x[1], reverse=True)[:10])
+            'top_actions': top_actions,
         })
     
     @action(detail=False, methods=['get'])
@@ -85,6 +83,7 @@ class BookingLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = BookingLog.objects.all()
     serializer_class = BookingLogSerializer
     permission_classes = [IsAdminUser]
+    pagination_class = LogPagination
     filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
     filterset_fields = ['action', 'old_status', 'new_status', 'user']
     ordering_fields = ['timestamp', 'action']
@@ -110,49 +109,46 @@ class PaymentLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = PaymentLog.objects.all()
     serializer_class = PaymentLogSerializer
     permission_classes = [IsAdminUser]
+    pagination_class = LogPagination
     filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
     filterset_fields = ['action', 'method', 'gateway', 'old_status', 'new_status', 'user']
     ordering_fields = ['timestamp', 'action', 'amount']
     ordering = ['-timestamp']
     search_fields = ['description', 'user__email', 'transaction_id']
-    
+
     @action(detail=False, methods=['get'])
     def by_payment(self, request):
         """Get all logs for a specific payment"""
         payment_id = request.query_params.get('payment_id')
         if not payment_id:
             return Response(
-                {'error': 'payment_id parameter is required'}, 
+                {'error': 'payment_id parameter is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
         logs = self.queryset.filter(payment_id=payment_id).order_by('-timestamp')
         serializer = self.get_serializer(logs, many=True)
         return Response(serializer.data)
-    
+
     @action(detail=False, methods=['get'])
     def payment_summary(self, request):
         """Get payment activity summary"""
         days = int(request.query_params.get('days', 30))
         start_date = timezone.now() - timedelta(days=days)
-        
         recent_logs = self.queryset.filter(timestamp__gte=start_date)
-        
-        # Calculate statistics
+
         total_payments = recent_logs.count()
         successful_payments = recent_logs.filter(new_status='paid').count()
         failed_payments = recent_logs.filter(new_status='failed').count()
         pending_payments = recent_logs.filter(new_status='pending').count()
-        
-        by_method = {}
-        by_gateway = {}
-        
-        for log in recent_logs:
-            if log.method:
-                by_method[log.method] = by_method.get(log.method, 0) + 1
-            if log.gateway:
-                by_gateway[log.gateway] = by_gateway.get(log.gateway, 0) + 1
-        
+        by_method = dict(
+            recent_logs.exclude(method__isnull=True).exclude(method='')
+            .values('method').annotate(count=Count('id')).values_list('method', 'count')
+        )
+        by_gateway = dict(
+            recent_logs.exclude(gateway__isnull=True).exclude(gateway='')
+            .values('gateway').annotate(count=Count('id')).values_list('gateway', 'count')
+        )
+
         return Response({
             'period_days': days,
             'total_payments': total_payments,
@@ -161,7 +157,7 @@ class PaymentLogViewSet(viewsets.ReadOnlyModelViewSet):
             'pending_payments': pending_payments,
             'success_rate': (successful_payments / total_payments * 100) if total_payments > 0 else 0,
             'by_method': by_method,
-            'by_gateway': by_gateway
+            'by_gateway': by_gateway,
         })
 
 class UserActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
@@ -169,6 +165,7 @@ class UserActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = UserActivityLog.objects.all()
     serializer_class = UserActivityLogSerializer
     permission_classes = [IsAdminUser]
+    pagination_class = LogPagination
     filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
     filterset_fields = ['action', 'user']
     ordering_fields = ['timestamp', 'action']
@@ -194,6 +191,7 @@ class SystemLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = SystemLog.objects.all()
     serializer_class = SystemLogSerializer
     permission_classes = [IsAdminUser]
+    pagination_class = LogPagination
     filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
     filterset_fields = ['level', 'component']
     ordering_fields = ['timestamp', 'level', 'component']
@@ -226,6 +224,7 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = AuditLog.objects.all()
     serializer_class = AuditLogSerializer
     permission_classes = [IsAdminUser]
+    pagination_class = LogPagination
     filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
     filterset_fields = ['audit_type', 'table_name', 'user']
     ordering_fields = ['timestamp', 'audit_type', 'table_name']
