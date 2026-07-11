@@ -42,10 +42,9 @@ class PaymentOrder(models.Model):
             self.amount_due = self.calculated_amount_due
         
         # Update status logic based on amount_due
-        if self.amount_due and self.amount_due <= 0:
+        if self.amount_due is not None and self.amount_due <= 0:
             self.status = "paid"
-        elif self.status == "paid" and self.amount_due and self.amount_due > 0:
-            # If status was paid but there's still amount due, revert to pending
+        elif self.status == "paid" and self.amount_due is not None and self.amount_due > 0:
             self.status = "pending"
             
         super().save(*args, **kwargs)
