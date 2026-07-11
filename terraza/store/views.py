@@ -12,6 +12,7 @@ from booking.models import Booking
 from .filters import PaymentOrderFilter
 from .models import PaymentOrder, Payment, RefundRequest
 from .serializers import PaymentOrderSerializer, PaymentSerializer, RefundRequestSerializer
+from logs.utils import log_payment_activity, log_booking_activity
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 mercado = mercadopago.SDK(settings.MERCADO_PAGO_ACCESS_TOKEN)
@@ -289,6 +290,39 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
         )
 
         order.save()  # recalculates amount_due and updates status
+
+        # Log the cash payment registration
+        log_payment_activity(
+            user=request.user,
+            payment_id=payment.id,
+            order_id=order.id,
+            action='admin_approved',
+            amount=amount,
+            method='cash',
+            gateway='cash',
+            old_status='',
+            new_status='paid',
+            description=f'Staff {request.user.email} registró pago en efectivo de ${amount:,.2f} para reserva {booking_id}',
+            metadata={
+                'booking_id': str(booking_id),
+                'staff_email': request.user.email,
+                'transaction_id': payment.transaction_id,
+            }
+        )
+        log_booking_activity(
+            user=request.user,
+            booking_id=booking.id,
+            action='payment_received',
+            old_status=booking.status,
+            new_status=booking.status,
+            description=f'Pago en efectivo de ${amount:,.2f} registrado por {request.user.email}',
+            metadata={
+                'payment_id': str(payment.id),
+                'amount': amount,
+                'method': 'cash',
+                'staff_email': request.user.email,
+            }
+        )
 
         return Response({
             'message': 'Pago en efectivo registrado exitosamente.',

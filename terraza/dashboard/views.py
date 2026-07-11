@@ -21,6 +21,7 @@ from .serializers import (
 from booking.models import Booking
 from store.models import PaymentOrder, Payment
 from users.models import UserAccount as User
+from logs.utils import log_payment_activity, log_booking_activity
 
 # Create your views here.
 
@@ -286,33 +287,68 @@ class DashboardViewSet(viewsets.ViewSet):
         if payment.status != 'pending':
             return Response({'error': 'Payment is not pending'}, status=status.HTTP_400_BAD_REQUEST)
         
+        booking = payment.order.booking
+
         if action == 'approve':
             payment.status = 'paid'
             payment.paid_at = timezone.now()
             payment.save()
-            
-            # Log admin action
+
             AdminAction.objects.create(
                 admin_user=request.user,
                 action='payment_approved',
                 target_id=str(payment.id),
-                description=f'Payment approved: {payment.amount} for booking {payment.order.booking.id}'
+                description=f'Payment approved: {payment.amount} for booking {booking.id}'
             )
-            
+            log_payment_activity(
+                user=request.user,
+                payment_id=payment.id,
+                order_id=payment.order.id,
+                action='admin_approved',
+                amount=payment.amount,
+                method=payment.method,
+                gateway=payment.gateway or '',
+                old_status='pending',
+                new_status='paid',
+                description=f'Pago aprobado por {request.user.email}: ${payment.amount:,.2f} (método: {payment.method})',
+                metadata={'booking_id': str(booking.id), 'staff_email': request.user.email}
+            )
+            log_booking_activity(
+                user=request.user,
+                booking_id=booking.id,
+                action='payment_received',
+                old_status=booking.status,
+                new_status=booking.status,
+                description=f'Pago de ${payment.amount:,.2f} aprobado por {request.user.email}',
+                metadata={'payment_id': str(payment.id), 'amount': float(payment.amount), 'method': payment.method}
+            )
+
             return Response({'message': 'Payment approved successfully'})
-        
+
         elif action == 'reject':
             payment.status = 'failed'
             payment.save()
-            
-            # Log admin action
+
             AdminAction.objects.create(
                 admin_user=request.user,
                 action='payment_rejected',
                 target_id=str(payment.id),
-                description=f'Payment rejected: {payment.amount} for booking {payment.order.booking.id}. Reason: {reason}'
+                description=f'Payment rejected: {payment.amount} for booking {booking.id}. Reason: {reason}'
             )
-            
+            log_payment_activity(
+                user=request.user,
+                payment_id=payment.id,
+                order_id=payment.order.id,
+                action='admin_rejected',
+                amount=payment.amount,
+                method=payment.method,
+                gateway=payment.gateway or '',
+                old_status='pending',
+                new_status='failed',
+                description=f'Pago rechazado por {request.user.email}: ${payment.amount:,.2f}. Motivo: {reason}',
+                metadata={'booking_id': str(booking.id), 'staff_email': request.user.email, 'reason': reason}
+            )
+
             return Response({'message': 'Payment rejected successfully'})
     
     @action(detail=False, methods=['post'])
@@ -342,37 +378,72 @@ class DashboardViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         
+        booking = payment.order.booking
+
         if action == 'approve':
             payment.status = 'paid'
             payment.paid_at = timezone.now()
             payment.save()
-            
-            # Log admin action
+
             AdminAction.objects.create(
                 admin_user=request.user,
                 action='cash_transfer_payment_approved',
                 target_id=str(payment.id),
-                description=f'Cash/Transfer payment approved: {payment.amount} for booking {payment.order.booking.id}'
+                description=f'Cash/Transfer payment approved: {payment.amount} for booking {booking.id}'
             )
-            
+            log_payment_activity(
+                user=request.user,
+                payment_id=payment.id,
+                order_id=payment.order.id,
+                action='admin_approved',
+                amount=payment.amount,
+                method=payment.method,
+                gateway=payment.method,
+                old_status='pending',
+                new_status='paid',
+                description=f'Comprobante de {payment.method} aprobado por {request.user.email}: ${payment.amount:,.2f}',
+                metadata={'booking_id': str(booking.id), 'staff_email': request.user.email}
+            )
+            log_booking_activity(
+                user=request.user,
+                booking_id=booking.id,
+                action='payment_received',
+                old_status=booking.status,
+                new_status=booking.status,
+                description=f'Pago por {payment.method} de ${payment.amount:,.2f} aprobado por {request.user.email}',
+                metadata={'payment_id': str(payment.id), 'amount': float(payment.amount), 'method': payment.method}
+            )
+
             return Response({
                 'message': 'Payment approved successfully',
                 'payment_id': str(payment.id),
                 'amount': float(payment.amount),
                 'method': payment.method,
-                'booking_id': str(payment.order.booking.id)
+                'booking_id': str(booking.id)
             })
-        
+
         elif action == 'reject':
             payment.status = 'failed'
             payment.save()
-            
-            # Log admin action
+
             AdminAction.objects.create(
                 admin_user=request.user,
                 action='cash_transfer_payment_rejected',
                 target_id=str(payment.id),
-                description=f'Cash/Transfer payment rejected: {payment.amount} for booking {payment.order.booking.id}. Reason: {reason}'
+                description=f'Cash/Transfer payment rejected: {payment.amount} for booking {booking.id}. Reason: {reason}'
+            )
+            log_payment_activity(
+                user=request.user,
+                payment_id=payment.id,
+                order_id=payment.order.id,
+                action='admin_rejected',
+                amount=payment.amount,
+                method=payment.method,
+                gateway=payment.method,
+                old_status='pending',
+                new_status='failed',
+                description=f'Comprobante de {payment.method} rechazado por {request.user.email}: ${payment.amount:,.2f}. Motivo: {reason}',
+                metadata={'booking_id': str(booking.id), 'staff_email': request.user.email, 'reason': reason}
             )
             
             return Response({
