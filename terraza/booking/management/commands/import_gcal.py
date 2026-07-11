@@ -101,7 +101,7 @@ def parse_ics(path):
         elif prop_upper == "DESCRIPTION":
             current["description"] = value.strip()
 
-    # Convert date-only values to aware datetimes using venue config
+    # Always use venue open/close times — GCal times are unreliable notes
     result = []
     for ev in events:
         start_raw = ev.get("_start_raw")
@@ -109,31 +109,31 @@ def parse_ics(path):
         if not start_raw:
             continue
 
-        if ev.get("_start_is_date"):
-            start = tz.make_aware(
-                datetime.datetime.combine(start_raw, config.open_time), MEXICO_TZ
-            )
+        # Get the calendar date (works for both date and datetime)
+        if isinstance(start_raw, datetime.datetime):
+            start_date = start_raw.date()
         else:
-            start = start_raw
+            start_date = start_raw
 
+        # For all-day events DTEND is the exclusive next day — step back one day
         if end_raw:
-            if ev.get("_end_is_date"):
-                # Google Calendar all-day end = exclusive next day → use prev day close time
-                end_date = end_raw - datetime.timedelta(days=1)
-                end = tz.make_aware(
-                    datetime.datetime.combine(end_date, config.close_time), MEXICO_TZ
-                )
+            if isinstance(end_raw, datetime.datetime):
+                end_date = end_raw.date()
             else:
-                end = end_raw
+                end_date = end_raw - datetime.timedelta(days=1)
         else:
-            # No DTEND: default to same day at close time
-            end = tz.make_aware(
-                datetime.datetime.combine(start.date(), config.close_time), MEXICO_TZ
-            )
+            end_date = start_date
 
-        # If end <= start (e.g. midnight close → next day), add 1 day to end
+        start = tz.make_aware(
+            datetime.datetime.combine(start_date, config.open_time), MEXICO_TZ
+        )
+        end = tz.make_aware(
+            datetime.datetime.combine(end_date, config.close_time), MEXICO_TZ
+        )
+
+        # close_time midnight (00:00) means it rolls to next day
         if end <= start:
-            end = end + datetime.timedelta(days=1)
+            end += datetime.timedelta(days=1)
 
         result.append({
             "summary":     ev.get("summary", "Evento importado"),
