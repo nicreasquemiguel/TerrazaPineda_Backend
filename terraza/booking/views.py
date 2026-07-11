@@ -541,8 +541,10 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
         # Fetch or create/update the user's review for this booking
         if request.method == "GET":
+            # Staff sees the booking owner's review; clients see their own
+            lookup_user = booking.user if request.user.is_staff else request.user
             try:
-                review = Review.objects.get(booking=booking, user=request.user)
+                review = Review.objects.get(booking=booking, user=lookup_user)
             except Review.DoesNotExist:
                 return Response({"detail": "No review yet"}, status=status.HTTP_404_NOT_FOUND)
             return Response(self.get_serializer(review).data)
