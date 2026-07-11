@@ -25,6 +25,8 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
     filterset_class = PaymentOrderFilter
 
     def get_queryset(self):
+        if self.request.user.is_staff:
+            return self.queryset.all()
         return self.queryset.filter(user=self.request.user)
 
     def perform_create(self, serializer):
