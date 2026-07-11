@@ -382,6 +382,17 @@ class BookingViewSet(viewsets.ModelViewSet):
             booking.save(update_fields=['status'])
         return Response({'status': booking.status, 'is_entregado': booking.is_entregado, 'entregado_after_status': booking.entregado_after_status})
 
+    @action(detail=True, methods=['post'], url_path='quitar_finalizado')
+    def quitar_finalizado(self, request, pk=None):
+        if not request.user.is_staff:
+            return Response({'detail': 'No autorizado.'}, status=status.HTTP_403_FORBIDDEN)
+        booking = self.get_object()
+        if booking.status != 'finalizado':
+            return Response({'detail': 'La reserva no está finalizada.'}, status=status.HTTP_400_BAD_REQUEST)
+        booking.status = 'liquidado'
+        booking.save(update_fields=['status'])
+        return Response({'status': booking.status, 'is_entregado': booking.is_entregado})
+
     @action(detail=True, methods=['get'], url_path='share-card/confirmation/image')
     def share_card_confirmation_image(self, request, pk=None):
         """Serve the confirmation card PNG directly through the API (CORS guaranteed)."""
