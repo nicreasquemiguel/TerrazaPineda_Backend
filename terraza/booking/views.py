@@ -533,16 +533,26 @@ class BookedDatesView(APIView):
         if venue_id:
             qs = qs.filter(venue_id=venue_id)
 
+        import datetime as dt
         booked = []
         for booking in qs:
-            item = {
-                'date': booking.start_datetime.date().isoformat(),
-                'user_initials': self._get_initials(booking.user),
-            }
-            if is_staff:
-                item['booking_id'] = str(booking.id)
-                item['label'] = self._get_label(booking)
-            booked.append(item)
+            local_start = timezone.localtime(booking.start_datetime)
+            local_end   = timezone.localtime(booking.end_datetime)
+            start_date  = local_start.date()
+            end_date    = local_end.date()
+            user_initials = self._get_initials(booking.user)
+            booking_id    = str(booking.id) if is_staff else None
+            label         = self._get_label(booking) if is_staff else None
+
+            current = start_date
+            while current <= end_date:
+                item = {'date': current.isoformat(), 'user_initials': user_initials}
+                if is_staff:
+                    item['booking_id'] = booking_id
+                    item['label'] = label
+                booked.append(item)
+                current += dt.timedelta(days=1)
+
         return Response(booked)
 
     def _get_initials(self, user):

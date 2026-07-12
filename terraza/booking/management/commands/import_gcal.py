@@ -184,6 +184,15 @@ class Command(BaseCommand):
         except Exception:
             raise CommandError("Invalid time format. Use HH:MM, e.g. --open-time 10:00")
 
+        # Suppress post_save signals (email + GCal sync) during bulk import
+        from django.db.models.signals import post_save
+        try:
+            from booking import signals as booking_signals
+            post_save.disconnect(booking_signals.booking_created_notification, sender=Booking)
+            post_save.disconnect(booking_signals.sync_booking_to_google_calendar, sender=Booking)
+        except Exception:
+            pass
+
         # ── resolve required DB objects ───────────────────────────────────────
         User = get_user_model()
         staff_user = User.objects.filter(is_staff=True).first()
