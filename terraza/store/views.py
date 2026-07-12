@@ -452,6 +452,40 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
         )
         return Response({"message": "Pago aprobado.", "payment": PaymentSerializer(payment).data})
 
+    def destroy(self, request, pk=None):
+        if not request.user.is_staff:
+            return Response({"detail": "No autorizado."}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            payment = Payment.objects.get(pk=pk)
+        except Payment.DoesNotExist:
+            return Response({"detail": "Pago no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+        if payment.method not in ('cash', 'transfer'):
+            return Response({"detail": "Solo se pueden eliminar pagos en efectivo o transferencia."}, status=status.HTTP_400_BAD_REQUEST)
+
+        booking = payment.order.booking
+        staff_name = request.user.get_full_name() or request.user.email
+        log_payment_activity(
+            user=request.user,
+            payment_id=payment.id,
+            order_id=payment.order.id,
+            action="admin_deleted",
+            amount=float(payment.amount),
+            method=payment.method,
+            gateway=payment.gateway,
+            old_status=payment.status,
+            new_status="deleted",
+            description=f"{staff_name} eliminó pago de ${float(payment.amount):,.2f}",
+            metadata={"staff_email": request.user.email},
+        )
+        payment.delete()
+        # Recalculate advance_paid from remaining paid payments
+        from django.db.models import Sum
+        paid_total = Payment.objects.filter(
+            order__booking=booking, status='paid'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        booking.advance_paid = paid_total
+        booking.save(update_fields=['advance_paid'])
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class RefundRequestViewSet(viewsets.ModelViewSet):
