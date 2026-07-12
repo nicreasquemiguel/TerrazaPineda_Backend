@@ -401,7 +401,8 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
         
         
         
-class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
+class PaymentViewSet(viewsets.ModelViewSet):
+    http_method_names = ['get', 'delete', 'head', 'options']
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
     permission_classes = [permissions.IsAuthenticated]
