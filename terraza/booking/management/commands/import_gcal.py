@@ -31,6 +31,15 @@ def _unfold(text):
     return re.sub(r"\r?\n[ \t]", "", text)
 
 
+def _unescape_ics(value):
+    """RFC 5545 TEXT unescaping: \\n → newline, \\, → comma, \\\\ → backslash."""
+    value = value.replace("\\n", "\n").replace("\\N", "\n")
+    value = value.replace("\\,", ",")
+    value = value.replace("\\;", ";")
+    value = value.replace("\\\\", "\\")
+    return value
+
+
 def _parse_dt(prop_name, value):
     """
     Return an aware datetime from an ICS DTSTART/DTEND line.
@@ -95,10 +104,10 @@ def parse_ics(path, open_time, close_time):
             current["_end_is_date"] = isinstance(parsed, datetime.date) and not isinstance(parsed, datetime.datetime)
 
         elif prop_upper == "SUMMARY":
-            current["summary"] = value.strip()
+            current["summary"] = _unescape_ics(value.strip())
 
         elif prop_upper == "DESCRIPTION":
-            current["description"] = value.strip()
+            current["description"] = _unescape_ics(value.strip())
 
     # Always use venue open/close times — GCal times are unreliable notes
     result = []
