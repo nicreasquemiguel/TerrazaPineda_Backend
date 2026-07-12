@@ -462,6 +462,34 @@ class BookingViewSet(viewsets.ModelViewSet):
             'label': coupon.label(),
         })
 
+    @action(detail=False, methods=['post'], url_path='validate_coupon_code')
+    def validate_coupon_code(self, request):
+        from .models import Coupon
+        from decimal import Decimal, InvalidOperation
+        code = request.data.get('code', '').strip()
+        subtotal = request.data.get('subtotal')
+        if not code:
+            return Response({'detail': 'Código requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            coupon = Coupon.objects.get(code__iexact=code)
+        except Coupon.DoesNotExist:
+            return Response({'detail': 'Cupón no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        if not coupon.is_valid():
+            return Response({'detail': 'Cupón inválido o agotado.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            subtotal_val = Decimal(str(subtotal)) if subtotal else Decimal('0')
+        except (InvalidOperation, TypeError):
+            subtotal_val = Decimal('0')
+        discount = coupon.get_discount_amount(subtotal_val)
+        return Response({
+            'code': coupon.code,
+            'discount_type': coupon.discount_type,
+            'discount_percent': str(coupon.discount_percent or ''),
+            'discount_amount': str(coupon.discount_amount or ''),
+            'computed_discount': str(discount),
+            'label': coupon.label(),
+        })
+
     @action(detail=True, methods=['post'], url_path='apply_coupon')
     def apply_coupon(self, request, pk=None):
         from .models import Coupon, BookingLineItem
