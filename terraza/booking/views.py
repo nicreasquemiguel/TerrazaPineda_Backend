@@ -39,10 +39,11 @@ class BookingViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrStaff]
     filter_backends = [
         DjangoFilterBackend,
+        drf_filters.SearchFilter,
         drf_filters.OrderingFilter,
     ]
     filterset_class = BookingFilter
-    
+    search_fields = ['description', 'user__first_name', 'user__last_name', 'user__email']
     ordering_fields = ['start_datetime', 'end_datetime', 'created_at', 'total_price']
     ordering = ['start_datetime']  # default ordering
 
