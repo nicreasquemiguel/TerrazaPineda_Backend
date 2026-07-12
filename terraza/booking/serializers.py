@@ -331,6 +331,7 @@ class BookingUpdateSerializer(serializers.ModelSerializer):
             'extra_service_ids',
             'start_datetime',
             'end_datetime',
+            'description',
             'status',
             'cancellation_reason',
             'hora_entrega',

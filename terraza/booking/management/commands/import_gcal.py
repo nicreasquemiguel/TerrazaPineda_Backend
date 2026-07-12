@@ -244,13 +244,19 @@ class Command(BaseCommand):
             resolved_status = "finalizado" if is_past else status
 
             if not dry_run:
+                gcal_desc = ev.get("description", "").strip()
+                description_parts = [summary]
+                if gcal_desc:
+                    description_parts.append(gcal_desc)
+                full_description = "\n".join(description_parts)
+
                 b = Booking.objects.create(
                     user=staff_user,
                     venue=venue,
                     package=package,
                     start_datetime=start,
                     end_datetime=end,
-                    description=f"[GCal] {summary}",
+                    description=full_description,
                     status=resolved_status,
                     total_price=0,
                     advance_paid=0,
