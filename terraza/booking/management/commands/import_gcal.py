@@ -254,7 +254,7 @@ class Command(BaseCommand):
 
             if not dry_run:
                 gcal_desc = ev.get("description", "").strip()
-                description_parts = [summary]
+                description_parts = ["[GCal]", summary]
                 if gcal_desc:
                     description_parts.append(gcal_desc)
                 full_description = "\n".join(description_parts)

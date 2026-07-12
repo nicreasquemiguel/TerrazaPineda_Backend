@@ -64,8 +64,8 @@ class Command(BaseCommand):
             gcal_desc  = (ev.get("description") or "").strip()
             start      = ev["start"]
 
-            # Build target description
-            parts = [summary]
+            # Build target description: [GCal] sentinel + name + optional body
+            parts = ["[GCal]", summary]
             if gcal_desc:
                 parts.append(gcal_desc)
             new_description = "\n".join(parts)

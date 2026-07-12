@@ -578,7 +578,10 @@ class BookedDatesView(APIView):
             return name
         if booking.description:
             desc = booking.description
-            return desc[7:] if desc.startswith('[GCal] ') else desc[:30]
+            if desc.startswith('[GCal]\n'):
+                lines = desc.split('\n', 2)
+                return lines[1].strip() if len(lines) > 1 else 'Sin nombre'
+            return desc[:40]
         return 'Sin nombre'
 
 
