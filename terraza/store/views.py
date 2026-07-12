@@ -478,6 +478,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
             description=f"{staff_name} eliminó pago de ${float(payment.amount):,.2f}",
             metadata={"staff_email": request.user.email},
         )
+        old_booking_status = booking.status
         payment.delete()
         # Recalculate advance_paid from remaining paid payments
         from django.db.models import Sum
@@ -486,6 +487,15 @@ class PaymentViewSet(viewsets.ModelViewSet):
         ).aggregate(total=Sum('amount'))['total'] or 0
         booking.advance_paid = paid_total
         booking.save(update_fields=['advance_paid'])
+        log_booking_activity(
+            user=request.user,
+            booking_id=booking.id,
+            action="payment_deleted",
+            old_status=old_booking_status,
+            new_status=booking.status,
+            description=f"{staff_name} eliminó pago de ${float(payment.amount):,.2f} ({payment.get_method_display() if hasattr(payment, 'get_method_display') else payment.method})",
+            metadata={"payment_id": str(pk)},
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
