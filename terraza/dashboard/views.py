@@ -180,10 +180,10 @@ class DashboardViewSet(viewsets.ViewSet):
             day_name = spanish_days[i]
             day_number = card_date.day
             
-            # Get bookings for this specific day
+            # Get bookings for this specific day (all non-cancelled/rejected statuses)
             day_bookings = Booking.objects.filter(
                 start_datetime__date=card_date,
-                status__in=['aceptacion', 'solicitud', 'confirmacion', 'finalizado']
+                status__in=['solicitud', 'aceptacion', 'apartado', 'liquidado', 'liquidado_entregado', 'entregado', 'finalizado']
             ).select_related('user', 'package')
             
             # Create daily object with all booking data
