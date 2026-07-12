@@ -151,6 +151,7 @@ class BookingSerializer(serializers.ModelSerializer):
         return instance
 
 class BookingListSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
     package_name = serializers.CharField(source='package.title', read_only=True)
     package_price = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -163,6 +164,9 @@ class BookingListSerializer(serializers.ModelSerializer):
         model = Booking
         fields = [
             'id',
+            'user',
+            'description',
+            'status',
             'start_datetime',
             'end_datetime',
             'package_name',
