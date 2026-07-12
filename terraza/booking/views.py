@@ -573,15 +573,14 @@ class BookedDatesView(APIView):
         return "?"
 
     def _get_label(self, booking):
+        if booking.description and booking.description.startswith('[GCal]\n'):
+            lines = booking.description.split('\n', 2)
+            return lines[1].strip() if len(lines) > 1 else 'Sin nombre'
         name = f"{booking.user.first_name} {booking.user.last_name}".strip()
         if name:
             return name
         if booking.description:
-            desc = booking.description
-            if desc.startswith('[GCal]\n'):
-                lines = desc.split('\n', 2)
-                return lines[1].strip() if len(lines) > 1 else 'Sin nombre'
-            return desc[:40]
+            return booking.description[:40]
         return 'Sin nombre'
 
 
