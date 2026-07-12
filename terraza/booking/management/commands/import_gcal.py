@@ -243,8 +243,13 @@ class Command(BaseCommand):
                 skipped_past += 1
                 continue
 
-            # Skip if a booking already blocks this slot
-            if not Booking.is_date_available(venue=venue, start_datetime=start, end_datetime=end):
+            # Skip if any non-cancelled booking already occupies this slot
+            already_exists = Booking.objects.filter(
+                venue=venue,
+                start_datetime__lt=end,
+                end_datetime__gt=start,
+            ).exclude(status='cancelado').exists()
+            if already_exists:
                 self.stdout.write(self.style.ERROR(f"  CONFLICT {label}"))
                 skipped_conflict += 1
                 continue
