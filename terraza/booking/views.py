@@ -5,8 +5,15 @@ from rest_framework import filters as drf_filters
 from rest_framework.views import APIView, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
 from django.utils import timezone
 from rest_framework.decorators import action
+
+
+class BookingPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 500
 
 from .filters import BookingFilter
 from .models import Booking, ExtraService, Venue, Package, BookingWish, Notification, Review, VenueConfiguration
@@ -35,6 +42,7 @@ class IsOwnerOrStaff(permissions.BasePermission):
 
 class BookingViewSet(viewsets.ModelViewSet):
     serializer_class = BookingSerializer
+    pagination_class = BookingPagination
 
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrStaff]
     filter_backends = [
