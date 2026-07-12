@@ -514,32 +514,54 @@ class BookingStatusCountsView(APIView):
 
 class BookedDatesView(APIView):
     permission_classes = [permissions.AllowAny]
-    authentication_classes = []
 
     def get(self, request, *args, **kwargs):
+        from rest_framework_simplejwt.authentication import JWTAuthentication
+        # Try to resolve the requesting user from the JWT token (optional auth)
+        auth_user = None
+        try:
+            result = JWTAuthentication().authenticate(request)
+            if result:
+                auth_user = result[0]
+        except Exception:
+            pass
+
+        is_staff = auth_user and auth_user.is_staff
+
         venue_id = request.query_params.get('venue')
-        qs = Booking.objects.exclude(status__in=['cancelado', 'rechazado', 'finalizado'])
+        qs = Booking.objects.exclude(status__in=['cancelado', 'rechazado', 'finalizado']).select_related('user')
         if venue_id:
             qs = qs.filter(venue_id=venue_id)
-        
-        booked = [
-            {
+
+        booked = []
+        for booking in qs:
+            item = {
                 'date': booking.start_datetime.date().isoformat(),
-                'user_initials': self.get_user_initials(booking.user),
+                'user_initials': self._get_initials(booking.user),
             }
-            for booking in qs
-        ]
+            if is_staff:
+                item['booking_id'] = str(booking.id)
+                item['label'] = self._get_label(booking)
+            booked.append(item)
         return Response(booked)
 
-    def get_user_initials(self, user):
+    def _get_initials(self, user):
         if user.first_name and user.last_name:
             return f"{user.first_name[0]}{user.last_name[0]}".upper()
-        elif user.first_name:
+        if user.first_name:
             return user.first_name[0].upper()
-        elif user.last_name:
+        if user.last_name:
             return user.last_name[0].upper()
-        else:
-            return "U"  # Unknown user
+        return "?"
+
+    def _get_label(self, booking):
+        name = f"{booking.user.first_name} {booking.user.last_name}".strip()
+        if name:
+            return name
+        if booking.description:
+            desc = booking.description
+            return desc[7:] if desc.startswith('[GCal] ') else desc[:30]
+        return 'Sin nombre'
 
 
 # Removed redundant views - BookedDatesView already handles availability
