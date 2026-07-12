@@ -504,6 +504,8 @@ class BookingViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Cupón no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
         if not coupon.is_valid():
             return Response({'detail': 'Cupón inválido o agotado.'}, status=status.HTTP_400_BAD_REQUEST)
+        if booking.coupon_id == coupon.id:
+            return Response({'detail': 'Este cupón ya está aplicado a esta reserva.'}, status=status.HTTP_400_BAD_REQUEST)
         booking.line_items.filter(item_type='discount', description__startswith='Cupón ').delete()
         if booking.coupon:
             old = booking.coupon
@@ -519,6 +521,7 @@ class BookingViewSet(viewsets.ModelViewSet):
             description=f'Cupón {coupon.label()}',
             unit_price=-discount, quantity=1,
         )
+        coupon.refresh_from_db()
         coupon.current_uses += 1
         coupon.save(update_fields=['current_uses'])
         booking.coupon = coupon
