@@ -435,6 +435,131 @@ class BookingViewSet(viewsets.ModelViewSet):
         from .serializers import BookingSerializer
         return Response(BookingSerializer(booking, context={'request': request}).data)
 
+    @action(detail=True, methods=['post'], url_path='validate_coupon')
+    def validate_coupon(self, request, pk=None):
+        from .models import Coupon
+        booking = self.get_object()
+        code = request.data.get('code', '').strip()
+        if not code:
+            return Response({'detail': 'Código requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            coupon = Coupon.objects.get(code__iexact=code)
+        except Coupon.DoesNotExist:
+            return Response({'detail': 'Cupón no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        if not coupon.is_valid():
+            return Response({'detail': 'Cupón inválido o agotado.'}, status=status.HTTP_400_BAD_REQUEST)
+        subtotal = sum(
+            li.unit_price * li.quantity
+            for li in booking.line_items.exclude(item_type='discount')
+        ) or booking.total_price
+        discount = coupon.get_discount_amount(subtotal)
+        return Response({
+            'code': coupon.code,
+            'discount_type': coupon.discount_type,
+            'discount_percent': str(coupon.discount_percent or ''),
+            'discount_amount': str(coupon.discount_amount or ''),
+            'computed_discount': str(discount),
+            'label': coupon.label(),
+        })
+
+    @action(detail=True, methods=['post'], url_path='apply_coupon')
+    def apply_coupon(self, request, pk=None):
+        from .models import Coupon, BookingLineItem
+        from decimal import Decimal
+        booking = self.get_object()
+        code = request.data.get('code', '').strip()
+        if not code:
+            return Response({'detail': 'Código requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            coupon = Coupon.objects.get(code__iexact=code)
+        except Coupon.DoesNotExist:
+            return Response({'detail': 'Cupón no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        if not coupon.is_valid():
+            return Response({'detail': 'Cupón inválido o agotado.'}, status=status.HTTP_400_BAD_REQUEST)
+        booking.line_items.filter(item_type='discount', description__startswith='Cupón ').delete()
+        if booking.coupon:
+            old = booking.coupon
+            old.current_uses = max(0, old.current_uses - 1)
+            old.save(update_fields=['current_uses'])
+        subtotal = sum(
+            li.unit_price * li.quantity
+            for li in booking.line_items.exclude(item_type='discount')
+        ) or booking.total_price
+        discount = coupon.get_discount_amount(subtotal)
+        BookingLineItem.objects.create(
+            booking=booking, item_type='discount',
+            description=f'Cupón {coupon.label()}',
+            unit_price=-discount, quantity=1,
+        )
+        coupon.current_uses += 1
+        coupon.save(update_fields=['current_uses'])
+        booking.coupon = coupon
+        booking.total_price = booking.calculate_total()
+        booking.save(update_fields=['coupon', 'total_price'])
+        from .serializers import BookingSerializer
+        return Response(BookingSerializer(booking, context={'request': request}).data)
+
+    @action(detail=True, methods=['delete'], url_path='remove_coupon')
+    def remove_coupon(self, request, pk=None):
+        booking = self.get_object()
+        if booking.coupon:
+            c = booking.coupon
+            c.current_uses = max(0, c.current_uses - 1)
+            c.save(update_fields=['current_uses'])
+        booking.line_items.filter(item_type='discount', description__startswith='Cupón ').delete()
+        booking.coupon = None
+        booking.total_price = booking.calculate_total()
+        booking.save(update_fields=['coupon', 'total_price'])
+        from .serializers import BookingSerializer
+        return Response(BookingSerializer(booking, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'], url_path='add_discount')
+    def add_discount(self, request, pk=None):
+        if not request.user.is_staff:
+            return Response({'detail': 'No autorizado.'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import BookingLineItem
+        from decimal import Decimal
+        booking = self.get_object()
+        description = request.data.get('description', '').strip()
+        try:
+            amount = abs(float(request.data.get('amount', 0)))
+        except (TypeError, ValueError):
+            amount = 0
+        if not description:
+            return Response({'detail': 'La descripción es requerida.'}, status=status.HTTP_400_BAD_REQUEST)
+        if amount <= 0:
+            return Response({'detail': 'El monto debe ser mayor a 0.'}, status=status.HTTP_400_BAD_REQUEST)
+        BookingLineItem.objects.create(
+            booking=booking, item_type='discount',
+            description=description,
+            unit_price=-Decimal(str(amount)), quantity=1,
+        )
+        booking.total_price = booking.calculate_total()
+        booking.save(update_fields=['total_price'])
+        from .serializers import BookingSerializer
+        return Response(BookingSerializer(booking, context={'request': request}).data)
+
+    @action(detail=True, methods=['delete'], url_path=r'remove_discount/(?P<line_item_id>\d+)')
+    def remove_discount(self, request, pk=None, line_item_id=None):
+        if not request.user.is_staff:
+            return Response({'detail': 'No autorizado.'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import BookingLineItem
+        booking = self.get_object()
+        try:
+            item = BookingLineItem.objects.get(id=line_item_id, booking=booking, item_type='discount')
+        except BookingLineItem.DoesNotExist:
+            return Response({'detail': 'Descuento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        if booking.coupon and item.description.startswith('Cupón '):
+            c = booking.coupon
+            c.current_uses = max(0, c.current_uses - 1)
+            c.save(update_fields=['current_uses'])
+            booking.coupon = None
+        item.delete()
+        booking.total_price = booking.calculate_total()
+        booking.save(update_fields=['coupon', 'total_price'])
+        from .serializers import BookingSerializer
+        return Response(BookingSerializer(booking, context={'request': request}).data)
+
     @action(detail=True, methods=['post'], url_path='quitar_finalizado')
     def quitar_finalizado(self, request, pk=None):
         if not request.user.is_staff:

@@ -95,14 +95,36 @@ class Venue(models.Model):
 
 
 class Coupon(models.Model):
+    DISCOUNT_TYPES = [('percent', 'Porcentaje'), ('fixed', 'Fijo')]
+
     code = models.CharField(max_length=50, unique=True)
-    discount_percent = models.DecimalField(max_digits=5, decimal_places=2)
+    discount_type = models.CharField(max_length=10, choices=DISCOUNT_TYPES, default='percent')
+    discount_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     max_uses = models.PositiveIntegerField()
     current_uses = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
+    valid_until = models.DateField(null=True, blank=True)
 
     def is_valid(self):
-        return self.is_active and self.current_uses < self.max_uses
+        from django.utils import timezone
+        if not self.is_active or self.current_uses >= self.max_uses:
+            return False
+        if self.valid_until and self.valid_until < timezone.now().date():
+            return False
+        return True
+
+    def get_discount_amount(self, subtotal):
+        subtotal = Decimal(str(subtotal))
+        if self.discount_type == 'fixed':
+            return min(Decimal(str(self.discount_amount or 0)), subtotal)
+        pct = Decimal(str(self.discount_percent or 0))
+        return (subtotal * pct / Decimal('100')).quantize(Decimal('0.01'))
+
+    def label(self):
+        if self.discount_type == 'fixed':
+            return f'{self.code} (-${self.discount_amount})'
+        return f'{self.code} (-{self.discount_percent}%)'
 
 
 class Booking(models.Model):
@@ -170,8 +192,7 @@ class Booking(models.Model):
             pass
         coupon = getattr(self, 'coupon', None)
         if coupon is not None and hasattr(coupon, 'is_valid') and coupon.is_valid():
-            discount = Decimal('1') - (coupon.discount_percent / Decimal('100'))
-            total *= discount
+            total -= coupon.get_discount_amount(total)
         return total.quantize(Decimal('0.01'))
 
     def create_line_items(self):
@@ -195,12 +216,12 @@ class Booking(models.Model):
         coupon = getattr(self, 'coupon', None)
         if coupon and coupon.is_valid():
             subtotal = sum(i.unit_price for i in items)
-            discount_amount = -(subtotal * coupon.discount_percent / Decimal('100')).quantize(Decimal('0.01'))
+            discount_amount = coupon.get_discount_amount(subtotal)
             items.append(BookingLineItem(
                 booking=self,
                 item_type='discount',
-                description=f'Descuento {coupon.code} ({coupon.discount_percent}%)',
-                unit_price=discount_amount,
+                description=f'Cupón {coupon.label()}',
+                unit_price=-discount_amount,
             ))
         BookingLineItem.objects.bulk_create(items)
 

@@ -1,7 +1,13 @@
 import datetime as dt_module
-from .models import Booking, ExtraService, Package, Venue, BookingWish, Notification, Review, BookingLineItem, VenueConfiguration
+from .models import Booking, Coupon, ExtraService, Package, Venue, BookingWish, Notification, Review, BookingLineItem, VenueConfiguration
 from users.serializers import UserSerializer
 from rest_framework import serializers
+
+
+class CouponSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Coupon
+        fields = ['id', 'code', 'discount_type', 'discount_percent', 'discount_amount', 'valid_until']
 
 
 class BookingLineItemSerializer(serializers.ModelSerializer):
@@ -41,6 +47,7 @@ class BookingSerializer(serializers.ModelSerializer):
     extra_services = ExtraServiceSerializer(many=True, required=False)
     rejection_reason = serializers.SerializerMethodField()
     line_items = BookingLineItemSerializer(many=True, read_only=True)
+    coupon_detail = CouponSerializer(source='coupon', read_only=True)
 
     class Meta:
         model = Booking
@@ -58,6 +65,7 @@ class BookingSerializer(serializers.ModelSerializer):
             'advance_paid',
             'total_price',
             'coupon',
+            'coupon_detail',
             'created_at',
             'rejection_reason',
             'cancellation_reason',
