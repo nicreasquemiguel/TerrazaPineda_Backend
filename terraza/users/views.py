@@ -1,8 +1,9 @@
 from django.shortcuts import render
 from django.db import transaction
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from rest_framework import generics
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -239,3 +240,30 @@ class SocialAuthJWTView(APIView):
             profile.image.save(filename, ContentFile(image_data), save=True)
         except Exception as exc:
             logger.warning('Failed to save social profile picture: %s', exc)
+
+
+class UserListView(APIView):
+    """Staff-only: search users by name or email for booking assignment."""
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        q = request.query_params.get('q', '').strip()
+        qs = UserAccount.objects.all().order_by('first_name', 'last_name')
+        if q:
+            qs = qs.filter(
+                Q(first_name__icontains=q) |
+                Q(last_name__icontains=q) |
+                Q(email__icontains=q)
+            )
+        qs = qs[:30]
+        data = [
+            {
+                'id': u.id,
+                'first_name': u.first_name or '',
+                'last_name': u.last_name or '',
+                'email': u.email,
+                'phone': getattr(u, 'phone', '') or '',
+            }
+            for u in qs
+        ]
+        return Response(data)

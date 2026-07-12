@@ -316,6 +316,7 @@ class BookingCreateSerializer(serializers.ModelSerializer):
 
 class BookingUpdateSerializer(serializers.ModelSerializer):
     package_id = serializers.IntegerField(write_only=True, required=False)
+    user_id = serializers.IntegerField(write_only=True, required=False)
     extra_service_ids = serializers.ListField(
         child=serializers.UUIDField(),
         required=False,
@@ -326,6 +327,7 @@ class BookingUpdateSerializer(serializers.ModelSerializer):
         model = Booking
         fields = [
             'package_id',
+            'user_id',
             'extra_service_ids',
             'start_datetime',
             'end_datetime',
@@ -355,6 +357,17 @@ class BookingUpdateSerializer(serializers.ModelSerializer):
                     'start_datetime': 'Los cambios de fecha deben solicitarse con al menos 3 semanas de anticipación.'
                 })
             validated_data['date_changes_count'] = instance.date_changes_count + 1
+
+        # Handle user reassignment (staff only)
+        if 'user_id' in validated_data:
+            if not is_staff:
+                raise ValidationError({'user_id': 'Solo el staff puede reasignar la reserva.'})
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            try:
+                instance.user = User.objects.get(id=validated_data.pop('user_id'))
+            except User.DoesNotExist:
+                raise ValidationError({'user_id': 'Usuario no encontrado.'})
 
         # Handle package update
         if 'package_id' in validated_data:
