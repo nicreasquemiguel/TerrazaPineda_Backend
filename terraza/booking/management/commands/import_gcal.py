@@ -117,16 +117,16 @@ def parse_ics(path, open_time, close_time):
         if not start_raw:
             continue
 
-        # Get the calendar date (works for both date and datetime)
+        # Always use Mexico local date — UTC datetimes crossing midnight give wrong date otherwise
         if isinstance(start_raw, datetime.datetime):
-            start_date = start_raw.date()
+            start_date = start_raw.astimezone(MEXICO_TZ).date()
         else:
             start_date = start_raw
 
         # For all-day events DTEND is the exclusive next day — step back one day
         if end_raw:
             if isinstance(end_raw, datetime.datetime):
-                end_date = end_raw.date()
+                end_date = end_raw.astimezone(MEXICO_TZ).date()
             else:
                 end_date = end_raw - datetime.timedelta(days=1)
         else:

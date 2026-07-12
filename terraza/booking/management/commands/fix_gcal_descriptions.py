@@ -85,17 +85,31 @@ class Command(BaseCommand):
                 not_found += 1
                 continue
 
-            if booking.description == new_description:
+            correct_end = ev["end"]
+            needs_desc = booking.description != new_description
+            needs_end  = abs((booking.end_datetime - correct_end).total_seconds()) > 60
+
+            if not needs_desc and not needs_end:
                 self.stdout.write(f"  UNCHANGED   {label}")
                 skipped += 1
                 continue
 
-            if not dry_run:
+            update_fields = []
+            if needs_desc:
                 booking.description = new_description
-                booking.save(update_fields=["description"])
+                update_fields.append("description")
+            if needs_end:
+                booking.end_datetime = correct_end
+                update_fields.append("end_datetime")
 
+            if not dry_run:
+                booking.save(update_fields=update_fields)
+
+            fixes = []
+            if needs_desc: fixes.append("desc")
+            if needs_end:  fixes.append(f"end→{correct_end.strftime('%d/%m %H:%M')}")
             self.stdout.write(self.style.SUCCESS(
-                f"  {'[DRY] ' if dry_run else ''}UPDATED     {label}"
+                f"  {'[DRY] ' if dry_run else ''}UPDATED [{', '.join(fixes)}]  {label}"
             ))
             updated += 1
 
