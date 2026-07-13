@@ -769,6 +769,11 @@ class NotificationViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         serializer.save()
 
+    @action(detail=False, methods=['post'], url_path='mark_all_read')
+    def mark_all_read(self, request):
+        updated = Notification.objects.filter(user=request.user, read=False).update(read=True)
+        return Response({'marked_read': updated})
+
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer

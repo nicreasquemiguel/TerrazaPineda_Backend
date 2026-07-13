@@ -24,6 +24,9 @@ djoser==2.2.2
 drf-spectacular==0.27.2
 drf-yasg==1.21.7
 environs==11.0.0
+google-api-python-client==2.131.0
+google-auth==2.29.0
+google-auth-httplib2==0.2.0
 gunicorn==22.0.0
 idna==3.7
 inflection==0.5.1
