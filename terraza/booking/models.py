@@ -27,8 +27,14 @@ class VenueConfiguration(models.Model):
         verbose_name = "Configuración del Venue"
         verbose_name_plural = "Configuración del Venue"
 
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.open_time == self.close_time:
+            raise ValidationError("El horario de apertura y cierre no pueden ser iguales.")
+
     def save(self, *args, **kwargs):
         self.pk = 1
+        self.full_clean()
         super().save(*args, **kwargs)
 
     @classmethod

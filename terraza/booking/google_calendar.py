@@ -60,6 +60,10 @@ def _build_event_body(booking):
     description_lines = [
         f"Cliente: {display_name}",
         f"Email: {user.email}",
+    ]
+    if getattr(user, 'phone', None):
+        description_lines.append(f"Teléfono: {user.phone}")
+    description_lines += [
         f"Lugar: {booking.venue.name}",
         f"Paquete: {booking.package.title} ({booking.package.n_people} personas)",
         f"Estado: {booking.get_status_display()}",
@@ -77,9 +81,10 @@ def _build_event_body(booking):
     if booking.description:
         description_lines.append(f"Notas: {booking.description}")
 
-    return {
-        'summary': f"Reserva: {display_name} — {booking.venue.name}",
+    body = {
+        'summary': f"{display_name} — {booking.venue.name}",
         'description': '\n'.join(description_lines),
+        'location': booking.venue.address or booking.venue.name,
         'start': {
             'dateTime': booking.start_datetime.isoformat(),
             'timeZone': settings.TIME_ZONE,
@@ -91,6 +96,27 @@ def _build_event_body(booking):
         'colorId': _STATUS_COLOR.get(booking.status, '1'),
     }
 
+    if user.email:
+        body['attendees'] = [{'email': user.email, 'displayName': display_name}]
+
+    return body
+
+
+def _execute_with_attendee_fallback(request_factory, body):
+    """
+    Execute an insert/update request. Service accounts on a personal Gmail
+    calendar (no Workspace domain-wide delegation) can't invite attendees —
+    retry once without them rather than losing the whole event.
+    """
+    try:
+        return request_factory(body).execute()
+    except HttpError as e:
+        if 'attendees' in body and 'domain-wide delegation' in str(e).lower():
+            print(f"[Google Calendar] Service account can't invite attendees (no domain-wide delegation) — creating event without attendees: {e}")
+            fallback_body = {k: v for k, v in body.items() if k != 'attendees'}
+            return request_factory(fallback_body).execute()
+        raise
+
 
 def create_event(booking):
     """Create a Google Calendar event for a booking. Returns the event ID or None."""
@@ -100,10 +126,12 @@ def create_event(booking):
 
     calendar_id = getattr(settings, 'GOOGLE_CALENDAR_ID', 'primary')
     try:
-        event = service.events().insert(
-            calendarId=calendar_id,
-            body=_build_event_body(booking),
-        ).execute()
+        event = _execute_with_attendee_fallback(
+            lambda body: service.events().insert(
+                calendarId=calendar_id, body=body, sendUpdates='all'
+            ),
+            _build_event_body(booking),
+        )
         return event.get('id')
     except HttpError as e:
         print(f"[Google Calendar] API error creating event: {e}")
@@ -121,11 +149,12 @@ def update_event(booking, event_id):
 
     calendar_id = getattr(settings, 'GOOGLE_CALENDAR_ID', 'primary')
     try:
-        service.events().update(
-            calendarId=calendar_id,
-            eventId=event_id,
-            body=_build_event_body(booking),
-        ).execute()
+        _execute_with_attendee_fallback(
+            lambda body: service.events().update(
+                calendarId=calendar_id, eventId=event_id, body=body, sendUpdates='all'
+            ),
+            _build_event_body(booking),
+        )
         return True
     except HttpError as e:
         print(f"[Google Calendar] API error updating event {event_id}: {e}")

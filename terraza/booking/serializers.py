@@ -22,6 +22,15 @@ class VenueConfigurationSerializer(serializers.ModelSerializer):
         model = VenueConfiguration
         fields = ['open_time', 'close_time']
 
+    def validate(self, data):
+        open_time = data.get('open_time', getattr(self.instance, 'open_time', None))
+        close_time = data.get('close_time', getattr(self.instance, 'close_time', None))
+        if open_time is not None and close_time is not None and open_time == close_time:
+            raise serializers.ValidationError(
+                "El horario de apertura y cierre no pueden ser iguales."
+            )
+        return data
+
 
 class PackageSerializer(serializers.ModelSerializer):
     class Meta:
