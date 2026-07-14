@@ -8,7 +8,7 @@ from django.conf import settings
 import stripe
 import mercadopago
 
-from booking.models import Booking
+from booking.models import Booking, VenueConfiguration
 from .filters import PaymentOrderFilter
 from .models import PaymentOrder, Payment, RefundRequest
 from .serializers import PaymentOrderSerializer, PaymentSerializer, RefundRequestSerializer
@@ -128,7 +128,7 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
                             "currency": "mxn",
                             "product_data": {
                                 "name": "Comisión de procesamiento",
-                                "description": "Stripe 3.6% + $3.00 MXN",
+                                "description": f"Stripe {float(STRIPE_RATE * 100):.1f}% + ${STRIPE_FIXED} MXN",
                             },
                             "unit_amount": int(commission * 100),
                         },
@@ -387,7 +387,19 @@ class PaymentOrderViewSet(viewsets.ModelViewSet):
             if RefundRequest.objects.filter(payment=payment).exists():
                 return Response({"error": "Refund already requested."}, status=400)
 
-            refund = RefundRequest.objects.create(payment=payment, reason=reason)
+            config = VenueConfiguration.get_config()
+            days_until_event = (booking.start_datetime.date() - now().date()).days
+            if days_until_event > config.cancellation_refund_threshold_days:
+                suggested_percent = config.cancellation_refund_percent
+            else:
+                suggested_percent = Decimal('0')
+            suggested_amount = (payment.amount * suggested_percent / 100).quantize(Decimal('0.01'))
+
+            refund = RefundRequest.objects.create(
+                payment=payment, reason=reason,
+                suggested_refund_percent=suggested_percent,
+                suggested_refund_amount=suggested_amount,
+            )
             order.status = "cancelled"
             order.save()
             return Response({

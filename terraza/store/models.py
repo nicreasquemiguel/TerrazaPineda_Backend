@@ -59,6 +59,10 @@ class Payment(models.Model):
     method = models.CharField(max_length=20, choices=[('card', 'Card'), ('paypal', 'PayPal'), ('cash', 'Cash'), ('transfer', 'Transfer')])
     gateway = models.CharField(max_length=32,blank=True, null=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
+    commission = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0,
+        help_text="Comisión real cobrada por la pasarela de pago (Stripe/MercadoPago) sobre este pago, si aplica.",
+    )
     status = models.CharField(max_length=20, choices=[('pending', 'Pending'), ('paid', 'Paid'), ('failed', 'Failed')], default='pending')
     transaction_id = models.CharField(max_length=255, blank=True, null=True)
     card_last4 = models.CharField(max_length=4, blank=True, null=True)
@@ -81,6 +85,10 @@ class RefundRequest(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     reviewed_at = models.DateTimeField(null=True, blank=True)
+    # Snapshot of the venue's cancellation policy at the moment the refund was requested —
+    # a reference for staff, not an automatic payout (refunds are still issued manually).
+    suggested_refund_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    suggested_refund_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     def __str__(self):
         return f"RefundRequest for {self.payment}"

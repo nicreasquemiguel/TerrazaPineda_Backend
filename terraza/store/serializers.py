@@ -9,7 +9,7 @@ class PaymentSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Payment
-        fields = ['id', 'order', 'user', 'method', 'amount', 'status', 'transaction_id', 'paid_at', 'created_at', 'gateway', 'card_last4', 'payment_photo', 'payment_photo_base64', 'payment_photo_url']
+        fields = ['id', 'order', 'user', 'method', 'amount', 'commission', 'status', 'transaction_id', 'paid_at', 'created_at', 'gateway', 'card_last4', 'payment_photo', 'payment_photo_base64', 'payment_photo_url']
         read_only_fields = ['id', 'created_at', 'paid_at']
     
     def get_payment_photo_url(self, obj):

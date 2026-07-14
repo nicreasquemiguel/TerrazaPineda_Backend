@@ -20,7 +20,11 @@ class BookingLineItemSerializer(serializers.ModelSerializer):
 class VenueConfigurationSerializer(serializers.ModelSerializer):
     class Meta:
         model = VenueConfiguration
-        fields = ['open_time', 'close_time', 'minimum_deposit']
+        fields = [
+            'open_time', 'close_time', 'minimum_deposit',
+            'date_change_notice_days', 'cancellation_refund_threshold_days',
+            'cancellation_refund_percent',
+        ]
 
     def validate(self, data):
         open_time = data.get('open_time', getattr(self.instance, 'open_time', None))
@@ -370,10 +374,11 @@ class BookingUpdateSerializer(serializers.ModelSerializer):
                 raise ValidationError({
                     'start_datetime': 'Solo se permite un cambio de fecha por evento.'
                 })
+            notice_days = VenueConfiguration.get_config().date_change_notice_days
             days_until_event = (instance.start_datetime.date() - timezone.now().date()).days
-            if days_until_event < 21:
+            if days_until_event < notice_days:
                 raise ValidationError({
-                    'start_datetime': 'Los cambios de fecha deben solicitarse con al menos 3 semanas de anticipación.'
+                    'start_datetime': f'Los cambios de fecha deben solicitarse con al menos {notice_days} días de anticipación.'
                 })
             validated_data['date_changes_count'] = instance.date_changes_count + 1
 

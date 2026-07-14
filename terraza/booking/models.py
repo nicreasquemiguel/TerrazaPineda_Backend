@@ -27,6 +27,21 @@ class VenueConfiguration(models.Model):
         verbose_name="Apartado mínimo",
         help_text="Monto mínimo en pesos para el apartado inicial de una reserva.",
     )
+    date_change_notice_days = models.PositiveIntegerField(
+        default=21,
+        verbose_name="Aviso mínimo para cambio de fecha (días)",
+        help_text="Días mínimos de anticipación requeridos para solicitar un cambio de fecha.",
+    )
+    cancellation_refund_threshold_days = models.PositiveIntegerField(
+        default=45,
+        verbose_name="Umbral de reembolso por cancelación (días)",
+        help_text="Si se cancela con más de estos días de anticipación, aplica el porcentaje de reembolso configurado. Con menos, no hay reembolso.",
+    )
+    cancellation_refund_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, default=50,
+        verbose_name="Porcentaje de reembolso por cancelación",
+        help_text="Porcentaje del anticipo que se reembolsa al cancelar por arriba del umbral de días.",
+    )
 
     class Meta:
         verbose_name = "Configuración del Venue"
@@ -38,6 +53,8 @@ class VenueConfiguration(models.Model):
             raise ValidationError("El horario de apertura y cierre no pueden ser iguales.")
         if self.minimum_deposit < 0:
             raise ValidationError("El apartado mínimo no puede ser negativo.")
+        if not (0 <= self.cancellation_refund_percent <= 100):
+            raise ValidationError("El porcentaje de reembolso debe estar entre 0 y 100.")
 
     def save(self, *args, **kwargs):
         self.pk = 1
@@ -50,6 +67,9 @@ class VenueConfiguration(models.Model):
             'open_time': datetime.time(10, 0),
             'close_time': datetime.time(22, 0),
             'minimum_deposit': Decimal('0'),
+            'date_change_notice_days': 21,
+            'cancellation_refund_threshold_days': 45,
+            'cancellation_refund_percent': Decimal('50'),
         })
         return obj
 

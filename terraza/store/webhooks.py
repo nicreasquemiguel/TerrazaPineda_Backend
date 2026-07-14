@@ -61,7 +61,8 @@ def stripe_webhook_view(request):
 
         # Credit only the booking portion, not the commission
         amount_in_pesos = booking_amount if booking_amount is not None else amount_total / 100
-        
+        commission_in_pesos = max(0, (amount_total / 100) - amount_in_pesos)
+
         order = PaymentOrder.objects.get(id=order_id)
         # Guard by transaction_id so duplicate webhook deliveries don't create duplicate payments
         # and partial-payment orders (status=pending) can still receive additional payments
@@ -70,6 +71,7 @@ def stripe_webhook_view(request):
                 order=order,
                 user=order.user,
                 amount=amount_in_pesos,
+                commission=commission_in_pesos,
                 method="card",
                 status="paid",
                 gateway=gateway,
@@ -136,10 +138,13 @@ def mercadopago_webhook_view(request):
                 except Exception:
                     pass
             amount = float(booking_amount_str) if booking_amount_str else payment_data.get("transaction_amount", order.amount_due)
+            transaction_amount = payment_data.get("transaction_amount", amount)
+            commission = max(0, transaction_amount - amount)
             Payment.objects.create(
                 order=order,
                 user=order.user,
                 amount=amount,
+                commission=commission,
                 method="card",
                 status="paid",
                 gateway="mercadopago",
