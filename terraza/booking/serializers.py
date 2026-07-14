@@ -20,7 +20,7 @@ class BookingLineItemSerializer(serializers.ModelSerializer):
 class VenueConfigurationSerializer(serializers.ModelSerializer):
     class Meta:
         model = VenueConfiguration
-        fields = ['open_time', 'close_time']
+        fields = ['open_time', 'close_time', 'minimum_deposit']
 
     def validate(self, data):
         open_time = data.get('open_time', getattr(self.instance, 'open_time', None))
@@ -73,6 +73,7 @@ class BookingSerializer(serializers.ModelSerializer):
             'status',
             'advance_paid',
             'total_price',
+            'minimum_deposit',
             'coupon',
             'coupon_detail',
             'created_at',

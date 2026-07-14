@@ -22,6 +22,11 @@ ICON_TYPE= (
 class VenueConfiguration(models.Model):
     open_time = models.TimeField(default=datetime.time(10, 0))
     close_time = models.TimeField(default=datetime.time(22, 0))
+    minimum_deposit = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0,
+        verbose_name="Apartado mínimo",
+        help_text="Monto mínimo en pesos para el apartado inicial de una reserva.",
+    )
 
     class Meta:
         verbose_name = "Configuración del Venue"
@@ -31,6 +36,8 @@ class VenueConfiguration(models.Model):
         from django.core.exceptions import ValidationError
         if self.open_time == self.close_time:
             raise ValidationError("El horario de apertura y cierre no pueden ser iguales.")
+        if self.minimum_deposit < 0:
+            raise ValidationError("El apartado mínimo no puede ser negativo.")
 
     def save(self, *args, **kwargs):
         self.pk = 1
@@ -42,6 +49,7 @@ class VenueConfiguration(models.Model):
         obj, _ = cls.objects.get_or_create(pk=1, defaults={
             'open_time': datetime.time(10, 0),
             'close_time': datetime.time(22, 0),
+            'minimum_deposit': Decimal('0'),
         })
         return obj
 
@@ -169,6 +177,10 @@ class Booking(models.Model):
     google_calendar_event_id = models.CharField(max_length=255, blank=True, null=True, editable=False)
     date_changes_count = models.IntegerField(default=0)
     cancellation_reason = models.TextField(blank=True, null=True)
+    minimum_deposit = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0, editable=False,
+        help_text="Apartado mínimo vigente al momento de crear la reserva (no cambia si la configuración cambia después).",
+    )
 
     class Meta:
         indexes = [
@@ -233,6 +245,11 @@ class Booking(models.Model):
 
     # Override save to set total_price and slug correctly
     def save(self, *args, **kwargs):
+        # Snapshot the deposit minimum in effect at creation — later config changes shouldn't
+        # retroactively change what an existing booking required.
+        if self._state.adding:
+            self.minimum_deposit = VenueConfiguration.get_config().minimum_deposit
+
         self.total_price = self.calculate_total()
         # Set start_date from start_datetime
         if self.start_datetime:
