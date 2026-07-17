@@ -148,7 +148,121 @@ class DashboardViewSet(viewsets.ViewSet):
         
         serializer = DashboardOverviewSerializer(data)
         return Response(serializer.data)
-    
+
+    @action(detail=False, methods=['get'])
+    def metrics(self, request):
+        """Rich KPIs: money, packages, dates and month breakdowns."""
+        now = timezone.now()
+        today = now.date()
+        current_month_start = today.replace(day=1)
+
+        ACTIVE_STATUSES = ['solicitud', 'aceptacion', 'apartado', 'liquidado',
+                           'liquidado_entregado', 'entregado', 'finalizado']
+        CONFIRMED_STATUSES = ['apartado', 'liquidado', 'liquidado_entregado',
+                              'entregado', 'finalizado']
+
+        active_qs = Booking.objects.filter(status__in=ACTIVE_STATUSES)
+
+        # ── Money ──────────────────────────────────────────────────────────────
+        # Outstanding balance across confirmed bookings not yet fully paid.
+        pending_agg = active_qs.filter(status__in=CONFIRMED_STATUSES).aggregate(
+            total=Sum('total_price'), paid=Sum('advance_paid')
+        )
+        pending_collections = float((pending_agg['total'] or 0) - (pending_agg['paid'] or 0))
+        pending_collections = max(0.0, pending_collections)
+
+        total_collected_all_time = float(
+            Payment.objects.filter(status='paid').aggregate(total=Sum('amount'))['total'] or 0
+        )
+
+        # Average value of confirmed bookings (what an event is typically worth).
+        avg_booking_value = float(
+            active_qs.filter(status__in=CONFIRMED_STATUSES).aggregate(
+                avg=Sum('total_price')
+            )['avg'] or 0
+        )
+        confirmed_count = active_qs.filter(status__in=CONFIRMED_STATUSES).count()
+        if confirmed_count:
+            avg_booking_value = round(avg_booking_value / confirmed_count, 2)
+
+        # ── Packages ───────────────────────────────────────────────────────────
+        popular_packages = list(
+            active_qs.values('package__title')
+            .annotate(count=Count('id'), revenue=Sum('total_price'))
+            .order_by('-count')[:5]
+        )
+        popular_packages = [
+            {
+                'title': p['package__title'] or 'Sin paquete',
+                'count': p['count'],
+                'revenue': float(p['revenue'] or 0),
+            }
+            for p in popular_packages
+        ]
+
+        # ── Dates ──────────────────────────────────────────────────────────────
+        upcoming_confirmed = active_qs.filter(
+            start_datetime__gte=now, status__in=CONFIRMED_STATUSES
+        ).count()
+        events_this_month = active_qs.filter(
+            start_datetime__date__gte=current_month_start,
+            start_datetime__date__lte=today.replace(day=28) + timedelta(days=4),
+        ).count()
+
+        # Revenue for the last 6 months (oldest → newest) from paid payments.
+        revenue_by_month = []
+        month_cursor = current_month_start
+        for _ in range(6):
+            m_start = month_cursor
+            if m_start.month == 12:
+                m_end = m_start.replace(year=m_start.year + 1, month=1, day=1) - timedelta(days=1)
+            else:
+                m_end = m_start.replace(month=m_start.month + 1, day=1) - timedelta(days=1)
+            m_revenue = Payment.objects.filter(
+                status='paid', paid_at__date__gte=m_start, paid_at__date__lte=m_end
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            revenue_by_month.append({
+                'month': m_start.strftime('%Y-%m'),
+                'label': m_start.strftime('%b'),
+                'revenue': float(m_revenue),
+            })
+            month_cursor = (m_start - timedelta(days=1)).replace(day=1)
+        revenue_by_month.reverse()
+
+        # ── Month KPIs ─────────────────────────────────────────────────────────
+        status_rows = (
+            Booking.objects.values('status').annotate(count=Count('id'))
+        )
+        status_breakdown = {row['status']: row['count'] for row in status_rows}
+
+        month_requests = Booking.objects.filter(
+            created_at__date__gte=current_month_start
+        ).count()
+        month_confirmed = Booking.objects.filter(
+            created_at__date__gte=current_month_start, status__in=CONFIRMED_STATUSES
+        ).count()
+        conversion_rate = round((month_confirmed / month_requests * 100), 1) if month_requests else 0.0
+
+        return Response({
+            'money': {
+                'pending_collections': pending_collections,
+                'total_collected_all_time': total_collected_all_time,
+                'avg_booking_value': avg_booking_value,
+            },
+            'popular_packages': popular_packages,
+            'dates': {
+                'upcoming_confirmed': upcoming_confirmed,
+                'events_this_month': events_this_month,
+            },
+            'revenue_by_month': revenue_by_month,
+            'status_breakdown': status_breakdown,
+            'month': {
+                'requests': month_requests,
+                'confirmed': month_confirmed,
+                'conversion_rate': conversion_rate,
+            },
+        })
+
     @action(detail=False, methods=['get'])
     def daily_cards(self, request):
         """Get daily booking cards for a specific week"""
