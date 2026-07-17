@@ -25,6 +25,14 @@ from logs.utils import log_payment_activity, log_booking_activity
 
 # Create your views here.
 
+# Bookings dated before this were bulk-imported historical calendar events
+# (see booking/management/commands/import_gcal.py), not real payment records —
+# they're permanently excluded from "money owed" metrics regardless of status.
+# Bookings on/after this date are real going-forward data and stay counted as
+# owed even once their event date is in the past, so genuine overdue balances
+# still surface correctly instead of silently dropping off once the date passes.
+HISTORICAL_DATA_CUTOFF = datetime(2026, 7, 16).date()
+
 class DashboardViewSet(viewsets.ViewSet):
     """Dashboard endpoints for admins"""
     permission_classes = [IsAdminUser]
@@ -160,14 +168,18 @@ class DashboardViewSet(viewsets.ViewSet):
                            'liquidado_entregado', 'entregado', 'finalizado']
         CONFIRMED_STATUSES = ['apartado', 'liquidado', 'liquidado_entregado',
                               'entregado', 'finalizado']
+        # 'finalizado' means the event already happened and is wrapped up — excluded
+        # from "still owed" math below. Bookings before HISTORICAL_DATA_CUTOFF are
+        # excluded too, regardless of status (see cutoff comment above).
+        OWED_STATUSES = ['apartado', 'liquidado', 'liquidado_entregado', 'entregado']
 
         active_qs = Booking.objects.filter(status__in=ACTIVE_STATUSES)
 
         # ── Money ──────────────────────────────────────────────────────────────
-        # Outstanding balance across confirmed bookings not yet fully paid.
-        pending_agg = active_qs.filter(status__in=CONFIRMED_STATUSES).aggregate(
-            total=Sum('total_price'), paid=Sum('advance_paid')
-        )
+        # Outstanding balance across real (post-cutoff), not-yet-finished bookings that aren't fully paid.
+        pending_agg = active_qs.filter(
+            status__in=OWED_STATUSES, start_datetime__date__gte=HISTORICAL_DATA_CUTOFF
+        ).aggregate(total=Sum('total_price'), paid=Sum('advance_paid'))
         pending_collections = float((pending_agg['total'] or 0) - (pending_agg['paid'] or 0))
         pending_collections = max(0.0, pending_collections)
 
