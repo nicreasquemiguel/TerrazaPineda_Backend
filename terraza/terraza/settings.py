@@ -152,8 +152,9 @@ INSTALLED_APPS = [
     'store',
     'dashboard',
     'logs',
+    'smarthome',
 
-    #Exterior 
+    #Exterior
     'rest_framework',
     'rest_framework.authtoken',
     'djoser',
@@ -288,6 +289,12 @@ STRIPE_WEBHOOK_KEY = env("STRIPE_WEBHOOK_KEY")
 MERCADO_PAGO_PUBLIC_KEY = env("MERCADO_PAGO_PUBLIC_KEY")
 MERCADO_PAGO_ACCESS_TOKEN = env("MERCADO_PAGO_ACCESS_TOKEN")
 MERCADO_PAGO_TEST_MODE = env.bool("MERCADO_PAGO_TEST_MODE", default=True)
+
+# Data center endpoint must match where the Tuya Cloud Project was created
+# (e.g. openapi.tuyaus.com / openapi-ueaz.tuyaus.com / openapi.tuyaeu.com / openapi.tuyacn.com / openapi.tuyain.com)
+TUYA_ACCESS_ID = env("TUYA_ACCESS_ID", default="")
+TUYA_ACCESS_SECRET = env("TUYA_ACCESS_SECRET", default="")
+TUYA_API_ENDPOINT = env("TUYA_API_ENDPOINT", default="https://openapi.tuyaus.com")
 
 
 AUTHENTICATION_BACKENDS = (
