@@ -242,6 +242,13 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         required=False,
         write_only=True
     )
+    # Staff-only: assign booking to an existing registered user
+    user_id = serializers.IntegerField(write_only=True, required=False)
+    # Staff-only: create a minimal guest account for walk-in clients
+    guest_first_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    guest_last_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    guest_phone = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    guest_email = serializers.EmailField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = Booking
@@ -252,6 +259,11 @@ class BookingCreateSerializer(serializers.ModelSerializer):
             'end_datetime',
             'description',
             'status',
+            'user_id',
+            'guest_first_name',
+            'guest_last_name',
+            'guest_phone',
+            'guest_email',
         ]
 
     def create(self, validated_data):
@@ -306,20 +318,48 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         if 'status' not in validated_data:
             validated_data['status'] = 'solicitud'
 
-        # Get user - use request user or first staff admin
+        # Resolve which user to assign the booking to
         request_user = self.context['request'].user
-        if request_user.is_authenticated:
-            user = request_user
-        else:
-            # Get first staff admin user
+        user_id = validated_data.pop('user_id', None)
+        guest_first_name = validated_data.pop('guest_first_name', '').strip()
+        guest_last_name = validated_data.pop('guest_last_name', '').strip()
+        guest_phone = validated_data.pop('guest_phone', '').strip()
+        guest_email = validated_data.pop('guest_email', '').strip()
+
+        if request_user.is_staff and user_id:
             from django.contrib.auth import get_user_model
             User = get_user_model()
             try:
-                user = User.objects.filter(is_staff=True).first()
-                if not user:
-                    raise ValidationError({'user': 'No staff admin user found.'})
-            except Exception:
-                raise ValidationError({'user': 'Error finding staff admin user.'})
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                raise ValidationError({'user_id': 'Usuario no encontrado.'})
+        elif request_user.is_staff and guest_first_name and guest_last_name:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            if guest_email:
+                email = guest_email.lower()
+            elif guest_phone:
+                phone_digits = ''.join(c for c in guest_phone if c.isdigit())
+                email = f'invitado_{phone_digits}@terrazapineda.local'
+            else:
+                raise ValidationError({'guest_phone': 'Se requiere teléfono o correo para el cliente invitado.'})
+            user, created = User.objects.get_or_create(
+                email=email,
+                defaults={
+                    'first_name': guest_first_name,
+                    'last_name': guest_last_name,
+                    'phone': guest_phone or None,
+                    'is_active': True,
+                    'email_verified': False,
+                }
+            )
+            if created:
+                user.set_unusable_password()
+                user.save(update_fields=['password'])
+        elif request_user.is_authenticated:
+            user = request_user
+        else:
+            raise ValidationError({'user': 'Autenticación requerida.'})
 
         booking = Booking.objects.create(
             venue=venue,
